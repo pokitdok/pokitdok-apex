@@ -1,0 +1,135 @@
+/**
+ * The Eligibility class is a example driver of how to use the PokitDok API Client to run
+ * an eligibility check on a patient.  It accomplishes this within its runEligibilityCheck()
+ * method.   This example code can be executed in a Salesforce instance with a custom OnClick
+ * JavaScript button on an object detail page configured like this:
+ * 
+ * {!REQUIRESCRIPT("/soap/ajax/25.0/connection.js")}
+ * {!REQUIRESCRIPT("/soap/ajax/25.0/apex.js")}
+ * var result = sforce.apex.execute("Eligibility","runEligibilityCheck",{});
+ * alert(result);
+ * window.location.reload();
+ * sforce.debug.trace=true;
+ * 
+ * The Client ID and Client Secret credentials passed into the API Client constructor are
+ * obtained by signing up for free at https://platform.pokitdok.com.
+ */
+global with sharing class Eligibility {    
+    static final String CLIENT_ID = '<YOUR_CLIENT_ID>';
+    static final String CLIENT_SECRET = '<YOUR_CLIENT_SECRET>';
+    
+    /**
+     * The runEligibilityCheck() method instantiates the API Client, manufactures a JSON
+     * payload with the patient's PHI, executes the eligibility method and does something 
+     * meaningful with the JSON response.
+     */
+    webservice static String runEligibilityCheck() {
+        // Use the PokitDok API Client to make an eligibility request
+        PokitDokAPIClient pokitdok = new PokitDokAPIClient(CLIENT_ID, CLIENT_SECRET);
+        String eligibilityRequest = buildEligibilityRequest();
+        String eligibilityResponse = pokitdok.eligibility(eligibilityRequest);
+        
+        // Check for errors
+        String errorMessage = null;
+        JSONParser parser = JSON.createParser(eligibilityResponse);
+        while (parser.nextToken() != null) {
+            if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
+                (parser.getText() == 'error') || (parser.getText() == 'errors')) {
+                    return 'Unable to process your eligibility request at this time.  The ' +
+                        'original request has been logged.';
+                }
+        }
+        
+        // Otherwise, do something meaningful with the response
+        return parseEligibilityResponse(eligibilityResponse);
+    }
+    
+    /**
+     * The buildEligibilityRequest() method abstracts the extraction of the data necessary
+     * data to build the payload for the eligibility request.  The PHI may exist in one or
+     * many custom Salesforce objects.  For the purposes of this example, the data is simply
+     * hardcoded and produces a JSON payload that looks like this:
+     *
+     * {
+     *     "member": {
+     *         "birth_date": "1970-01-01",
+     *         "first_name": "John",
+     *         "last_name": "Smith",
+     *         "id": "3141592653"
+     *     },
+     *     "provider": {
+     *         "first_name": "Jane",
+     *         "last_name": "Doe",
+     *         "npi": "1467560003"
+     *     },
+     *     "trading_partner_id": "MOCKPAYER"
+     * }
+     * 
+     * @return the serialized JSON to send to the eligibility endpoint
+     */
+    private static String buildEligibilityRequest() {        
+        // Create the object map
+        Map<String,Object> eligibilityRequest = new Map<String,Object>();
+        
+        Map<String,String> member = new Map<String,String>();
+        member.put('birth_date', '1970-01-01');
+        member.put('first_name', 'John');
+        member.put('last_name', 'Smith');
+        member.put('id', '3141592653');
+        eligibilityRequest.put('member',member);
+        
+        Map<String,String> provider = new Map<String,String>();
+        provider.put('first_name', 'Jane');
+        provider.put('last_name', 'Doe');
+        provider.put('npi', '1467560003');
+        eligibilityRequest.put('provider',provider);
+        
+        eligibilityRequest.put('trading_partner_id','MOCKPAYER');        
+        
+        // Serialize to JSON
+        return JSON.serialize(eligibilityRequest);
+    }
+    
+    /**
+     * The parseEligibilityResponse parses the JSON response from the eligibility API
+     * call and produces a meaningful message for the user.  It demonstrates how to pull
+     * out a few fields in the JSON to construct a message.  In this case, the message
+     * conveys to the user that the patient's insurance coverage is currently active, as
+     * well as when coverage began under the plan.
+     * 
+     * @param response is the JOSN response from the eligibilty request
+     * @return some meaningful text to send back to the end user
+     */
+    private static String parseEligibilityResponse(String response) {
+        String meaningfulResponse = '';
+        boolean isActive = false;
+        Date planBeginDate = null;
+        
+        // Parse the response, extracting the active flag and the date that plan coverage
+        // began.
+        JSONParser parser = JSON.createParser(response);
+        while (parser.nextToken() != null) {
+            if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
+                (parser.getText() == 'active')) {
+                    parser.nextToken();
+                    isActive = parser.getBooleanValue();
+                }
+            if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
+                (parser.getText() == 'plan_begin_date')) {
+                    parser.nextToken();
+                    planBeginDate = parser.getDateValue();
+                }
+        }
+        
+        // Asssemble the message
+        if (isActive) {
+            meaningfulResponse = 'The patient\'s coverage is active and began on ' + 
+                planBeginDate.format();
+        }
+        else {
+            meaningfulResponse = 'The patient\'s coverage has lapsed and is not active';
+        }
+        
+        return meaningfulResponse;
+    }    
+}
