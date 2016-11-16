@@ -3,7 +3,6 @@
  * calls need to be mocked.  The PokitDokMockResponseGenerator class implements the 
  * HttpCalloutMock interface and generate fake HTTPResponses for the various endpoints
  * of the PokitDok Platform.
- * 
  */
 @isTest
 public class PokitDokMockResponseGenerator implements HttpCalloutMock {
