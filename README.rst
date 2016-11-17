@@ -12,7 +12,7 @@ Report API client issues_ on GitHub
 Quick start
 -----------
 
-.. code-block:: apex
+.. code-block:: java
 
     // Instantiate a PokitDokAPIClient with your credentials
     PokitDokAPIClient pokitdok = new PokitDokAPIClient('<CLIENT_ID>', '<CLIENT_SECRET>');
@@ -47,6 +47,7 @@ Configuration
 -------------
 
 In addition to bringing the source code into the Sandbox environment, the system need to be configured appropriately to allow the HTTP calls to go through.  Create a ``Remote Site`` by traversing ``Security Controls`` > ``Remote Site Settings`` and use these values:
+
   :Remote Site Name: PokitDok_Platform
   :Remote Site URL: https://platform.pokitdok.com
   
