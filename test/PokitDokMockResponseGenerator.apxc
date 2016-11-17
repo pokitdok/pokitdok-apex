@@ -1,0 +1,87 @@
+/**
+ * APEX test classes are not permitted to access remote sites, so all tests of the API
+ * calls need to be mocked.  The PokitDokMockResponseGenerator class implements the 
+ * HttpCalloutMock interface and generate fake HTTPResponses for the various endpoints
+ * of the PokitDok Platform.
+ */
+@isTest
+public class PokitDokMockResponseGenerator implements HttpCalloutMock {
+    // Test constants
+    public final static String ACCESS_TOKEN = 'POKIT_TOKEN';
+    public final static String ACTIVITY_ID = '11111111';
+    public final static String CORRELATION_ID = '99999999';
+    
+    /**
+     * The respond method returns a mocked HTTPResponse that can be tested by assertion.
+     * The following endpoints are mocked:
+     *   - authentication
+     *   - eligibility
+     * 
+     * @param the request is the mocked up request that would be sent to the APIs
+     * @return a mocked HTTPResponse
+     */
+    public HTTPResponse respond(HTTPRequest request) {
+        HttpResponse response = new HttpResponse();
+        
+        // Create a mocked response for testing authentication
+        if (request.getEndpoint() == PokitDokAPIClient.POKITDOK_BASE_URL + 
+            						 PokitDokAPIClient.AUTHENTICATION_ENDPOINT) {
+			response = createAuthenticationResponse();
+        }
+        
+        // Create a mocked response for testing an eligibility request
+        if (request.getEndpoint() == PokitDokAPIClient.POKITDOK_BASE_URL + 
+            						 PokitDokAPIClient.ELIGIBILITY_ENDPOINT) {
+			response = createEligibilityResponse();
+        }
+        return response;
+    }
+
+    /**
+     * The createAuthenticationResponse method creates a mocked HTTPResponse to the
+     * authentication endpoint.  Namely it creates a fake OAuth access token to be
+     * passed in future API calls.
+     * 
+     * @return the HTTPResponse with the access token
+     */
+    private HTTPResponse createAuthenticationResponse() {
+        // Create a fake authentication response
+        HttpResponse response = new HttpResponse();
+		response.setStatusCode(200);
+        response.setHeader('Content-Type', 'application/json');
+
+        Map<String,Object> authenticationResponse = new Map<String,Object>();
+        authenticationResponse.put('access_token', ACCESS_TOKEN);       
+        response.setBody(JSON.serialize(authenticationResponse));
+        
+        return response;
+    }
+
+    /**
+     * The createEligibilityResponse method creates a mocked HTTPResponse to the 
+     * eligibility endpoint.  Namely it creates a fake Activity ID and Correlation 
+     * ID in the JSON.  These two pieces of data would be in every response returned
+     * by the PokitDok Platform APIs.
+     * 
+     * @return the HTTPResponse with the Activity ID and Correlation ID
+     */    
+    private HTTPResponse createEligibilityResponse() {
+        // Create a fake eligibility response
+        HttpResponse response = new HttpResponse();
+		response.setStatusCode(200);
+        response.setHeader('Content-Type', 'application/json');        
+        
+        Map<String,Object> eligibilityResponse = new Map<String,Object>();
+        
+		Map<String,Object> meta = new Map<String,Object>();
+        meta.put('activity_id', ACTIVITY_ID);
+        eligibilityResponse.put('meta', meta);
+        
+        Map<String,Object> data = new Map<String,Object>();
+        data.put('correlation_id', CORRELATION_ID);
+        eligibilityResponse.put('data', data);    
+        
+        response.setBody(JSON.serialize(eligibilityResponse));
+        return response;
+    }
+}

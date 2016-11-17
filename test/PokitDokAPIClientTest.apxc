@@ -1,0 +1,95 @@
+/**
+ * The PokitDokAPIClientTest class tests out the implmented API calls of the PokitDok
+ * Platform.  Since APEX test classes are not permitted to access remote sites, the
+ * responses from the method calls are all mocked.  The mocked responses are produced
+ * by the PokitDokMockResponseGenerator.
+ */
+@isTest
+public class PokitDokAPIClientTest {
+    
+    /**
+     * The testAuthentication method tests that the access token is on the response.
+     * Since this test does not actually go across the wire, thge actual Client ID /
+     * Client Secret credentials are _not_ required.
+     */
+    @isTest 
+    static void testAuthentication() {
+        // Set mock callout class 
+        Test.setMock(HttpCalloutMock.class, new PokitDokMockResponseGenerator());        
+        PokitDokAPIClient pokitDok = new PokitDokAPIClient('clientID', 'clientSecret');
+        String session_token = pokitDok.authenticate();
+        
+        // Verify the session access token has been set
+        System.assertEquals(session_token, PokitDokMockResponseGenerator.ACCESS_TOKEN);
+    }
+
+    /**
+     * The testEligibility method tests that the Activity ID and Correlation ID are on
+     * the response.  Since this test does not actually go across the wire, thge actual 
+     * Client ID / Client Secret credentials are _not_ required.  The JSON payload should
+     * look like this:
+     * 
+     * {
+     *     "member": {
+     *         "birth_date": "1970-01-01",
+     *         "first_name": "John",
+     *         "last_name": "Smith",
+     *         "id": "3141592653"
+     *     },
+     *     "provider": {
+     *         "first_name": "Jane",
+     *         "last_name": "Doe",
+     *         "npi": "1467560003"
+     *     },
+     *     "trading_partner_id": "MOCKPAYER"
+     * }
+     */    
+    @isTest static void testEligibility() {
+        // Set mock callout class 
+        Test.setMock(HttpCalloutMock.class, new PokitDokMockResponseGenerator());        
+        PokitDokAPIClient pokitDok = new PokitDokAPIClient('clientId', 'clientSecret');
+        
+        // Create a test JSON request
+        Map<String,Object> eligibilityRequest = new Map<String,Object>();
+        
+        Map<String,String> member = new Map<String,String>();
+        member.put('birth_date', '1970-01-01');
+        member.put('first_name', 'John');
+        member.put('last_name', 'Smith');
+        member.put('id', '3141592653');
+        eligibilityRequest.put('member',member);
+        
+        Map<String,String> provider = new Map<String,String>();
+        provider.put('first_name', 'Jane');
+        provider.put('last_name', 'Doe');
+        provider.put('npi', '1467560003');
+        eligibilityRequest.put('provider',provider);
+        
+        eligibilityRequest.put('trading_partner_id','MOCKPAYER');        
+        
+        String eligibilityResponse = pokitDok.eligibility(JSON.serialize(eligibilityRequest));
+        
+        // Verify just a few fields in the JSON response
+        System.assert(eligibilityResponse != null);
+        String expectedActivityID = '';
+        String expectedCorrelationID = '';
+        
+        JSONParser parser = JSON.createParser(eligibilityResponse);
+        while (parser.nextToken() != null) {
+            if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
+                (parser.getText() == 'activity_id')) {
+                parser.nextToken();
+                expectedActivityID = parser.getText();
+                System.assertEquals(expectedActivityID, 
+                                    PokitDokMockResponseGenerator.ACTIVITY_ID);
+            }
+            if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
+                (parser.getText() == 'correlation_id')) {
+                parser.nextToken();
+                expectedCorrelationID = parser.getText();
+                System.assertEquals(expectedCorrelationID, 
+                                    PokitDokMockResponseGenerator.CORRELATION_ID);
+            }
+        }        
+    }
+}
