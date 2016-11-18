@@ -3,10 +3,16 @@
  * Platform.  Since APEX test classes are not permitted to access remote sites, the
  * responses from the method calls are all mocked.  The mocked responses are produced
  * by the PokitDokMockResponseGenerator.
+ * 
+ * Copyright (C) 2016, All Rights Reserved, PokitDok, Inc.
+ * https://platform.pokitdok.com
+ *
+ * Please see the License.txt file for more information.
+ * All other rights reserved.
  */
 @isTest
 public class PokitDokAPIClientTest {
-    
+   
     /**
      * The testAuthentication method tests that the access token is on the response.
      * Since this test does not actually go across the wire, thge actual Client ID /
@@ -15,7 +21,7 @@ public class PokitDokAPIClientTest {
     @isTest 
     static void testAuthentication() {
         // Set mock callout class 
-        Test.setMock(HttpCalloutMock.class, new PokitDokMockResponseGenerator());        
+        Test.setMock(HttpCalloutMock.class, new PokitDokMockResponseGenerator(false, false));        
         PokitDokAPIClient pokitDok = new PokitDokAPIClient('clientID', 'clientSecret');
         String session_token = pokitDok.authenticate();
         
@@ -46,7 +52,7 @@ public class PokitDokAPIClientTest {
      */    
     @isTest static void testEligibility() {
         // Set mock callout class 
-        Test.setMock(HttpCalloutMock.class, new PokitDokMockResponseGenerator());        
+        Test.setMock(HttpCalloutMock.class, new PokitDokMockResponseGenerator(false, false));        
         PokitDokAPIClient pokitDok = new PokitDokAPIClient('clientId', 'clientSecret');
         
         // Create a test JSON request
@@ -92,4 +98,66 @@ public class PokitDokAPIClientTest {
             }
         }        
     }
+
+    /**
+     * The testUnsuccessfulResponse method tests an HTTP response with a status code
+     * other than 200.  The client will simply return the error message it received
+     * from the APIs.  The message will include a JSON field called "errors".
+     */
+    @isTest 
+    static void testUnsuccessfulResponse() {
+        // Set mock callout class 
+        Test.setMock(HttpCalloutMock.class, new PokitDokMockResponseGenerator(false, true));        
+        PokitDokAPIClient pokitDok = new PokitDokAPIClient('clientID', 'clientSecret');
+
+        // Create an empty test JSON request
+        Map<String,Object> eligibilityRequest = new Map<String,Object>();
+        String eligibilityResponse = pokitDok.eligibility(JSON.serialize(eligibilityRequest));
+        
+        // Verify there is an error message in the JSON response
+        System.assert(eligibilityResponse != null);
+        String expectedUnsuccessfulMessage = '';
+        
+        JSONParser parser = JSON.createParser(eligibilityResponse);
+        while (parser.nextToken() != null) {
+            if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
+                (parser.getText() == 'errors')) {
+                parser.nextToken();
+                expectedUnsuccessfulMessage = parser.getText();
+                System.assertEquals(expectedUnsuccessfulMessage, 
+                                    PokitDokMockResponseGenerator.UNSUCCESSFUL_MESSAGE);
+            }
+        }
+    }
+    
+    /**
+     * The testCalloutException method tests a borked HTTP connection.  The client 
+     * will return a manufactured JSON message will include a JSON field called 
+     * "error".
+     */
+    @isTest 
+    static void testCalloutException() {
+        // Set mock callout class 
+        Test.setMock(HttpCalloutMock.class, new PokitDokMockResponseGenerator(true, false));        
+        PokitDokAPIClient pokitDok = new PokitDokAPIClient('clientID', 'clientSecret');
+
+        // Create an empty test JSON request
+        Map<String,Object> eligibilityRequest = new Map<String,Object>();
+        String eligibilityResponse = pokitDok.eligibility(JSON.serialize(eligibilityRequest));
+        
+        // Verify there is an error message in the JSON response
+        System.assert(eligibilityResponse != null);
+        String expectedCalloutExceptionMessage = '';
+        
+        JSONParser parser = JSON.createParser(eligibilityResponse);
+        while (parser.nextToken() != null) {
+            if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
+                (parser.getText() == 'error')) {
+                parser.nextToken();
+                expectedCalloutExceptionMessage = parser.getText();
+                System.assertEquals(expectedCalloutExceptionMessage, 
+                                    PokitDokAPIClient.CALLOUT_EXCEPTION_MESSAGE);
+            }
+        }
+    }    
 }

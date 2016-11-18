@@ -3,13 +3,35 @@
  * calls need to be mocked.  The PokitDokMockResponseGenerator class implements the 
  * HttpCalloutMock interface and generate fake HTTPResponses for the various endpoints
  * of the PokitDok Platform.
+ * 
+ * Copyright (C) 2016, All Rights Reserved, PokitDok, Inc.
+ * https://platform.pokitdok.com
+ *
+ * Please see the License.txt file for more information.
+ * All other rights reserved.
  */
 @isTest
 public class PokitDokMockResponseGenerator implements HttpCalloutMock {
+    
     // Test constants
     public final static String ACCESS_TOKEN = 'POKIT_TOKEN';
     public final static String ACTIVITY_ID = '11111111';
     public final static String CORRELATION_ID = '99999999';
+    public final static String UNSUCCESSFUL_MESSAGE = 'Unprocessable Entity';
+    
+    // Configures whether or not to handle error conditions
+    public boolean isExceptionThrown = false;
+    public boolean isResponseUnsuccessful = false;
+    
+    /**
+     * The constructor allows the calling test code to configure the mock response
+     * generator to handle error conditions.
+     */
+    public PokitDokMockResponseGenerator(boolean isExceptionThrown, 
+                                         boolean isResponseUnsuccessful) {
+        isExceptionThrown = isExceptionThrown;
+		isResponseUnsuccessful = isResponseUnsuccessful;
+    }
     
     /**
      * The respond method returns a mocked HTTPResponse that can be tested by assertion.
@@ -21,22 +43,33 @@ public class PokitDokMockResponseGenerator implements HttpCalloutMock {
      * @return a mocked HTTPResponse
      */
     public HTTPResponse respond(HTTPRequest request) {
-        HttpResponse response = new HttpResponse();
+        // Throw an exception for testing an HTTP error
+        if (isExceptionThrown) {
+            CalloutException e = (CalloutException)CalloutException.class.newInstance();
+            e.setMessage('Mock CalloutException thrown.');
+            throw e;   
+        }
+        
+        // Create a mocked response for testing an unsuccessful response
+        if (isResponseUnsuccessful) {
+            return createUnsuccessfulResponse();   
+        }
         
         // Create a mocked response for testing authentication
+        HttpResponse response = new HttpResponse();
         if (request.getEndpoint() == PokitDokAPIClient.POKITDOK_BASE_URL + 
-            						 PokitDokAPIClient.AUTHENTICATION_ENDPOINT) {
-			response = createAuthenticationResponse();
+                                     PokitDokAPIClient.AUTHENTICATION_ENDPOINT) {                                         
+            response = createAuthenticationResponse();
         }
         
         // Create a mocked response for testing an eligibility request
         if (request.getEndpoint() == PokitDokAPIClient.POKITDOK_BASE_URL + 
-            						 PokitDokAPIClient.ELIGIBILITY_ENDPOINT) {
-			response = createEligibilityResponse();
+                                     PokitDokAPIClient.ELIGIBILITY_ENDPOINT) {			
+            response = createEligibilityResponse();            
         }
         return response;
     }
-
+    
     /**
      * The createAuthenticationResponse method creates a mocked HTTPResponse to the
      * authentication endpoint.  Namely it creates a fake OAuth access token to be
@@ -73,7 +106,7 @@ public class PokitDokMockResponseGenerator implements HttpCalloutMock {
         
         Map<String,Object> eligibilityResponse = new Map<String,Object>();
         
-		Map<String,Object> meta = new Map<String,Object>();
+        Map<String,Object> meta = new Map<String,Object>();
         meta.put('activity_id', ACTIVITY_ID);
         eligibilityResponse.put('meta', meta);
         
@@ -82,6 +115,26 @@ public class PokitDokMockResponseGenerator implements HttpCalloutMock {
         eligibilityResponse.put('data', data);    
         
         response.setBody(JSON.serialize(eligibilityResponse));
+        return response;
+    }
+
+    /**
+     * The createUnsuccessfulResponse method creates a mocked HTTPResponse to an 
+     * API endpoint.  It returns a status code of 422, however, to exercise a failure
+     * case.
+     * 
+     * @return the HTTPResponse with a 422 status code
+     */
+    private HTTPResponse createUnsuccessfulResponse() {
+        // Create a fake unsuccessful authentication response
+        HttpResponse response = new HttpResponse();
+		response.setStatusCode(422);
+        response.setHeader('Content-Type', 'application/json');
+
+        Map<String,Object> authenticationResponse = new Map<String,Object>();
+        authenticationResponse.put('errors', UNSUCCESSFUL_MESSAGE);       
+        response.setBody(JSON.serialize(authenticationResponse));
+        
         return response;
     }
 }
