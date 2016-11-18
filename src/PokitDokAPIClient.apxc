@@ -21,6 +21,9 @@ public class PokitDokAPIClient {
     public static final String AUTHENTICATION_ENDPOINT = '/oauth2/token';
     public static final String ELIGIBILITY_ENDPOINT = '/api/v4/eligibility/';
     
+    public static final String CALLOUT_EXCEPTION_MESSAGE = 'Unable to process your ' +
+        'request at this time. The original request has been logged';
+    
     // The OAuth credentials
     private String clientID;
     private String clientSecret;
@@ -118,8 +121,7 @@ public class PokitDokAPIClient {
                              '[PokitDokAPIClient]  Error Message: ' + e);
                 System.debug(Logginglevel.ERROR, 
                              '[PokitDokAPIClient]  POST Request: ' + request.getBody());
-                return '{ "error": "Unable to process your eligibility at this time.  ' + 
-                    'The origianl request has been logged" }';
+                return '{ "error": ' + CALLOUT_EXCEPTION_MESSAGE + ' }';
             }
             
             // Log bad responses
