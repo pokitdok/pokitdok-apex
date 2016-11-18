@@ -3,20 +3,25 @@
  * calls need to be mocked.  The PokitDokMockResponseGenerator class implements the 
  * HttpCalloutMock interface and generate fake HTTPResponses for the various endpoints
  * of the PokitDok Platform.
+ * 
+ * Copyright (C) 2016, All Rights Reserved, PokitDok, Inc.
+ * https://platform.pokitdok.com
+ *
+ * Please see the License.txt file for more information.
+ * All other rights reserved.
  */
 @isTest
 public class PokitDokMockResponseGenerator implements HttpCalloutMock {
+    
     // Test constants
     public final static String ACCESS_TOKEN = 'POKIT_TOKEN';
     public final static String ACTIVITY_ID = '11111111';
     public final static String CORRELATION_ID = '99999999';
     public final static String UNSUCCESSFUL_MESSAGE = 'Unprocessable Entity';
-    public final static String CALLOUT_EXCEPTION_MESSAGE = 'Unable to process...';
     
     // Configures whether or not to handle error conditions
     public boolean isExceptionThrown = false;
     public boolean isResponseUnsuccessful = false;
-    
     
     /**
      * The constructor allows the calling test code to configure the mock response
@@ -45,14 +50,13 @@ public class PokitDokMockResponseGenerator implements HttpCalloutMock {
             throw e;   
         }
         
-        HttpResponse response = new HttpResponse();
-        
         // Create a mocked response for testing an unsuccessful response
         if (isResponseUnsuccessful) {
             return createUnsuccessfulResponse();   
         }
         
         // Create a mocked response for testing authentication
+        HttpResponse response = new HttpResponse();
         if (request.getEndpoint() == PokitDokAPIClient.POKITDOK_BASE_URL + 
                                      PokitDokAPIClient.AUTHENTICATION_ENDPOINT) {                                         
             response = createAuthenticationResponse();

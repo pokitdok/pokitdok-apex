@@ -14,8 +14,15 @@
  * The endpoint for https://platform.pokitdok.com needs to be set up as a Remote Site.
  * For reference, see:
  * https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_callouts_remote_site_settings.htm
+ * 
+ * Copyright (C) 2016, All Rights Reserved, PokitDok, Inc.
+ * https://platform.pokitdok.com
+ *
+ * Please see the License.txt file for more information.
+ * All other rights reserved.
  */
 public class PokitDokAPIClient {   
+    
     // URL endpoints
     public static final String POKITDOK_BASE_URL = 'https://platform.pokitdok.com';
     public static final String AUTHENTICATION_ENDPOINT = '/oauth2/token';

@@ -13,10 +13,18 @@
  * 
  * The Client ID and Client Secret credentials passed into the API Client constructor are
  * obtained by signing up for free at https://platform.pokitdok.com.
+ * 
+ * Copyright (C) 2016, All Rights Reserved, PokitDok, Inc.
+ * https://platform.pokitdok.com
+ *
+ * Please see the License.txt file for more information.
+ * All other rights reserved.
  */
 global with sharing class Eligibility {    
-    static final String CLIENT_ID = '<YOUR_CLIENT_ID>';
-    static final String CLIENT_SECRET = '<YOUR_CLIENT_SECRET>';
+ 
+    // These are your credentials
+    static final String CLIENT_ID = 'bbVYgUxvBfN7vro7viOT';
+    static final String CLIENT_SECRET = 'lSVEDN1y9nonyGepW13PnbCBcOReiS5fTEVXMN4g';
     
     /**
      * The runEligibilityCheck() method instantiates the API Client, manufactures a JSON

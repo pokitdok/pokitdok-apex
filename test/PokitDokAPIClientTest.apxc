@@ -3,6 +3,12 @@
  * Platform.  Since APEX test classes are not permitted to access remote sites, the
  * responses from the method calls are all mocked.  The mocked responses are produced
  * by the PokitDokMockResponseGenerator.
+ * 
+ * Copyright (C) 2016, All Rights Reserved, PokitDok, Inc.
+ * https://platform.pokitdok.com
+ *
+ * Please see the License.txt file for more information.
+ * All other rights reserved.
  */
 @isTest
 public class PokitDokAPIClientTest {
