@@ -18,6 +18,8 @@ Quick start
     PokitDokAPIClient pokitdok = new PokitDokAPIClient('<CLIENT_ID>', '<CLIENT_SECRET>');
 
     // Create an eligibility request payload
+    Map<String,Object> eligibilityRequest = new Map<String,Object>();
+    
     Map<String,String> member = new Map<String,String>();
     member.put('birth_date', '1970-01-01');
     member.put('first_name', 'John');
