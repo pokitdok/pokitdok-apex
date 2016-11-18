@@ -46,11 +46,17 @@ There is not presently an artifact for this codebase that can be installed eithe
 Configuration
 -------------
 
-In addition to bringing the source code into the Sandbox environment, the system need to be configured appropriately to allow the HTTP calls to go through.  Create a ``Remote Site`` by traversing ``Security Controls`` > ``Remote Site Settings`` and use these values:
+In addition to bringing the source code into the Sandbox environment, the system needs to be configured appropriately to allow the HTTP calls to go through.
+
+Navigate: ``Security Controls`` > ``Remote Site Settings`` > ``New``
+
+Create a new ``Remote Site`` with these values:
 
 :Remote Site Name: PokitDok_Platform
 :Remote Site URL: https://platform.pokitdok.com
   
+Reference the APEX Developer's Guide for additional information about adding a `Remote Site <https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_callouts_remote_site_settings.htm>`_.
+
 
 Testing
 -------
