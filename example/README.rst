@@ -66,13 +66,13 @@ Create a custom button to call into the APEX code
 
 .. code-block:: javascript
 
-  {!REQUIRESCRIPT("/soap/ajax/25.0/connection.js")} 
-  {!REQUIRESCRIPT("/soap/ajax/25.0/apex.js")} 
-  var result = sforce.apex.execute("Eligibility","runEligibilityCheck",{}); 
-  alert(result); 
-  window.location.reload(); 
+  {!REQUIRESCRIPT("/soap/ajax/25.0/connection.js")}
+  {!REQUIRESCRIPT("/soap/ajax/25.0/apex.js")}
+  var patientId='{!Patient__c.Name}';
+  var result = sforce.apex.execute("Eligibility","runEligibilityCheck",{patientID: patientId});
+  alert(result);
+  window.location.reload();
   sforce.debug.trace=true;
-
 
 Navigate: ``Setup`` > ``Create`` > ``Objects`` > ``Patient`` > ``[Edit] Patient Layout`` > ``Buttons``
 
@@ -95,7 +95,11 @@ Navigate: ``Patients`` > ``New``
 Make An Eligibility Request
 ---------------------------
 
-After creating the patient, click the ``Run Eligibility Request`` button.
+After creating the patient, click the ``Run Eligibility Request`` button.  If successful, you will see a message stating something akin to:
+
+    *The patient's coverage is active and began on 2/15/2013*
+
+You should also see the ``Active Coverage`` and ``Plan Begin Date`` fields update.
 
 
 License

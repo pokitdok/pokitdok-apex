@@ -49,12 +49,12 @@ public class PokitDokMockResponseGenerator implements HttpCalloutMock {
             e.setMessage('Mock CalloutException thrown.');
             throw e;   
         }
-        
+
         // Create a mocked response for testing an unsuccessful response
         if (isResponseUnsuccessful) {
             return createUnsuccessfulResponse();   
         }
-        
+
         // Create a mocked response for testing authentication
         HttpResponse response = new HttpResponse();
         if (request.getEndpoint() == PokitDokAPIClient.POKITDOK_BASE_URL + 
