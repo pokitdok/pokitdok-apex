@@ -60,6 +60,34 @@ Create a new ``Remote Site`` with these values:
 Reference the APEX Developer's Guide for additional information about adding a `Remote Site <https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_callouts_remote_site_settings.htm>`_.
 
 
+Platform Cache
+--------------
+
+OAuth session access tokens can be persisted and used across the organization to eliminate the need to authenticate with the PokitDok Platform servers with each API request.  This is accomplished by utilizing the Salesforce Platform Cache.
+
+The Salesforce Platform Cache lets you store and retrieve data that is shared across your organization. Put, retrieve, or remove cache values by using the Cache.Org and Org.Partition classes in the Cache namespace. Use the Platform Cache Partition tool to create or remove org partitions and allocate their cache capacities to balance performance across apps.
+
+Unlike session cache, org cache is accessible across sessions, requests, and org users and profiles. Org cache expires when its specified time-to-live is reached, in this case, 60 minutes.
+
+If your organization has not set up a default cache partition by following these steps.
+
+Navigate: ``Setup`` > ``Platform Cache`` > ``New Platform Cache Partition``
+
+Create a default cache with these or similar configuration parameters.
+
+*Details*
+
+:Label: BaseOrgCachePartition
+:Name: BaseOrgCachePartition
+:Default Partition: X
+:Description: Default Org level cache partition
+
+*Org Cache Allocation*
+
+:Organization: 5
+
+Reference the APEX Developer's Guide for additional information about configuring `Platform Cache <https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_cache_namespace_overview.htm>`_.
+
 Testing
 -------
 
@@ -79,4 +107,3 @@ Copyright (c) 2016 PokitDok, Inc.  See LICENSE_ for details.
 .. _issues: https://github.com/pokitdok/pokitdok-apex/issues
 .. _example: https://github.com/pokitdok/pokitdok-apex/tree/dev/example
 .. _LICENSE: LICENSE.txt
-
