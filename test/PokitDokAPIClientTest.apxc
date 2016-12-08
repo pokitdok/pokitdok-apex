@@ -51,7 +51,6 @@ public class PokitDokAPIClientTest {
         PokitDokAPIClient pokitDok = new PokitDokAPIClient(TEST_CLIENT_ID, TEST_CLIENT_SECRET, 
                                                            true);
         String session_token = pokitDok.authenticate();
-        session_token = pokitDok.authenticate();
         
         // Verify the session access token has been set
         System.assertEquals(session_token, PokitDokMockResponseGenerator.ACCESS_TOKEN);
