@@ -25,7 +25,7 @@ global with sharing class Eligibility {
  
     // These are your credentials
     static final String CLIENT_ID = '<YOUR_CLIENT_ID>';
-    static final String CLIENT_SECRET = '<YOUR_CLIENT_SECRET>';    
+    static final String CLIENT_SECRET = '<YOUR_CLIENT_SECRET>';
     
     /**
      * The runEligibilityCheck() method instantiates the API Client, manufactures a JSON
@@ -38,7 +38,6 @@ global with sharing class Eligibility {
         PokitDokAPIClient pokitdok = new PokitDokAPIClient(CLIENT_ID, CLIENT_SECRET, true);
         String eligibilityRequest = buildEligibilityRequest(patientID);
         String eligibilityResponse = pokitdok.eligibility(eligibilityRequest);
-        //System.debug('[Eligibility]  autoRenewSession: ' + pokitdok.autoRenewSession);
         
         // Check for errors
         String errorMessage = null;
