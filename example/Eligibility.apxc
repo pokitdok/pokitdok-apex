@@ -35,7 +35,7 @@ global with sharing class Eligibility {
     webservice static String runEligibilityCheck(String patientID) {
         
         // Use the PokitDok API Client to make an eligibility request
-        PokitDokAPIClient pokitdok = new PokitDokAPIClient(CLIENT_ID, CLIENT_SECRET);
+        PokitDokAPIClient pokitdok = new PokitDokAPIClient(CLIENT_ID, CLIENT_SECRET, true);
         String eligibilityRequest = buildEligibilityRequest(patientID);
         String eligibilityResponse = pokitdok.eligibility(eligibilityRequest);
         
@@ -135,7 +135,7 @@ global with sharing class Eligibility {
                               where Name = :patientID];
         
         String meaningfulResponse = '';
-        boolean isActive = false;
+        Boolean isActive = false;
         Date planBeginDate = null;
         
         // Parse the response, extracting the active flag and the date that plan coverage
@@ -170,3 +170,4 @@ global with sharing class Eligibility {
         return meaningfulResponse;
     }  
 }
+

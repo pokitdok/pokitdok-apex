@@ -1,0 +1,83 @@
+/**
+ * The PokitDokSessionCacheManagerTest class tests out the functionality of managing
+ * the OAuth access token for session management with the PokitDok Platform.
+ * 
+ * Copyright (C) 2016, All Rights Reserved, PokitDok, Inc.
+ * https://platform.pokitdok.com
+ *
+ * Please see the License.txt file for more information.
+ * All other rights reserved.
+ */
+@isTest
+public class PokitDokSessionCacheManagerTest {
+    
+    public final static String TEST_TOKEN = 'TEST_TOKEN';
+    public final static String TEST_CLIENT_ID = 'ClientID';
+    
+    /**
+     * The testCacheEnabled method tests that the organization cache is available for 
+     * usage.
+     */
+    @isTest 
+    static void testCacheAvailable() {
+        // Verify the cache partition is available
+        PokitDokSessionCacheManager sessionManager = new PokitDokSessionCacheManager(TEST_CLIENT_ID);
+        System.assert(sessionManager.cacheEnabled);
+
+        Map<String, Object> cacheStatistics = sessionManager.getCacheStatistics();        
+        String default_partition = (String) cacheStatistics.get('default_partition');        
+        System.assertNotEquals('', default_partition);
+    }
+
+    /**
+     * The testStorage method tests that the storage, retrieval and removal of session
+     * access tokens work.
+     */
+    @isTest 
+    static void testProperStorage() {
+        // Put, get, remove, rinse, repeat
+        PokitDokSessionCacheManager sessionManager = new PokitDokSessionCacheManager(TEST_CLIENT_ID);
+        sessionManager.putToken(TEST_TOKEN);
+		
+        String retrievedToken = sessionManager.getToken();
+        System.assertEquals(TEST_TOKEN, retrievedToken);
+       
+        Boolean removedToken = sessionManager.removeToken();
+        System.assertEquals(true, removedToken);
+    }
+    
+    /**
+     * The testCacheMiss method tests that retrieval fails when trying to access a token for
+     * a completely different client app.
+     */
+    @isTest 
+    static void testCacheMiss() {
+        // Register the cache manager with the normal Client ID and add the token to it
+        PokitDokSessionCacheManager sessionManager = new PokitDokSessionCacheManager(TEST_CLIENT_ID);
+        sessionManager.putToken(TEST_TOKEN);
+        
+        // Try to retrieve it from a cache manager registered with a different Client ID
+        sessionManager = new PokitDokSessionCacheManager(TEST_CLIENT_ID + 'xxx');
+        String retrievedToken = sessionManager.getToken();
+        System.assertEquals(null, retrievedToken);
+    }
+    
+    /**
+    * The testCacheDisabled method tests that the organization cache is not available, the 
+    * cache storage methods aren't available.
+    */
+    @isTest 
+    static void testCacheUnavailable() {
+        // Fake unavailability by manually turning off the cacheEnabled flag
+        PokitDokSessionCacheManager sessionManager = new PokitDokSessionCacheManager(TEST_CLIENT_ID);
+        sessionManager.cacheEnabled = false;
+        sessionManager.putToken(TEST_TOKEN);
+		
+        String retrievedToken = sessionManager.getToken();
+        System.assertEquals(null, retrievedToken);
+
+        Boolean removedToken = sessionManager.removeToken();
+        System.assertEquals(false, removedToken);
+    }
+}
+

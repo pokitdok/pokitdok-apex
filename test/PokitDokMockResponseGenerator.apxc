@@ -18,19 +18,23 @@ public class PokitDokMockResponseGenerator implements HttpCalloutMock {
     public final static String ACTIVITY_ID = '11111111';
     public final static String CORRELATION_ID = '99999999';
     public final static String UNSUCCESSFUL_MESSAGE = 'Unprocessable Entity';
+    public final static String SESSION_EXPIRED_MESSAGE = 'Unauthorized';
     
     // Configures whether or not to handle error conditions
-    public boolean isExceptionThrown = false;
-    public boolean isResponseUnsuccessful = false;
+    public Boolean isExceptionThrown = false;
+    public Boolean isResponseUnsuccessful = false;
+    public Boolean hasSessionExpired = false;
     
     /**
      * The constructor allows the calling test code to configure the mock response
      * generator to handle error conditions.
      */
-    public PokitDokMockResponseGenerator(boolean isExceptionThrown, 
-                                         boolean isResponseUnsuccessful) {
-        isExceptionThrown = isExceptionThrown;
-		isResponseUnsuccessful = isResponseUnsuccessful;
+    public PokitDokMockResponseGenerator(Boolean isExceptionThrown, 
+                                         Boolean isResponseUnsuccessful,
+                                         Boolean hasSessionExpired) {
+        this.isExceptionThrown = isExceptionThrown;
+        this.isResponseUnsuccessful = isResponseUnsuccessful;
+        this.hasSessionExpired = hasSessionExpired;
     }
     
     /**
@@ -47,7 +51,7 @@ public class PokitDokMockResponseGenerator implements HttpCalloutMock {
         if (isExceptionThrown) {
             CalloutException e = (CalloutException)CalloutException.class.newInstance();
             e.setMessage('Mock CalloutException thrown.');
-            throw e;   
+            throw e;
         }
 
         // Create a mocked response for testing an unsuccessful response
@@ -55,6 +59,11 @@ public class PokitDokMockResponseGenerator implements HttpCalloutMock {
             return createUnsuccessfulResponse();   
         }
 
+        // Create a mocked response for testing a session expiring
+        if (hasSessionExpired) {
+            return createSessionExpiredResponse();   
+        }
+        
         // Create a mocked response for testing authentication
         HttpResponse response = new HttpResponse();
         if (request.getEndpoint() == PokitDokAPIClient.POKITDOK_BASE_URL + 
@@ -67,6 +76,7 @@ public class PokitDokMockResponseGenerator implements HttpCalloutMock {
                                      PokitDokAPIClient.ELIGIBILITY_ENDPOINT) {			
             response = createEligibilityResponse();            
         }
+
         return response;
     }
     
@@ -80,7 +90,7 @@ public class PokitDokMockResponseGenerator implements HttpCalloutMock {
     private HTTPResponse createAuthenticationResponse() {
         // Create a fake authentication response
         HttpResponse response = new HttpResponse();
-		response.setStatusCode(200);
+        response.setStatusCode(200);
         response.setHeader('Content-Type', 'application/json');
 
         Map<String,Object> authenticationResponse = new Map<String,Object>();
@@ -101,7 +111,7 @@ public class PokitDokMockResponseGenerator implements HttpCalloutMock {
     private HTTPResponse createEligibilityResponse() {
         // Create a fake eligibility response
         HttpResponse response = new HttpResponse();
-		response.setStatusCode(200);
+        response.setStatusCode(200);
         response.setHeader('Content-Type', 'application/json');        
         
         Map<String,Object> eligibilityResponse = new Map<String,Object>();
@@ -128,7 +138,7 @@ public class PokitDokMockResponseGenerator implements HttpCalloutMock {
     private HTTPResponse createUnsuccessfulResponse() {
         // Create a fake unsuccessful authentication response
         HttpResponse response = new HttpResponse();
-		response.setStatusCode(422);
+        response.setStatusCode(422);
         response.setHeader('Content-Type', 'application/json');
 
         Map<String,Object> authenticationResponse = new Map<String,Object>();
@@ -137,4 +147,25 @@ public class PokitDokMockResponseGenerator implements HttpCalloutMock {
         
         return response;
     }
+    
+    /**
+     * The createSessionExpiredResponse method creates a mocked HTTPResponse to an 
+     * API endpoint.  It returns a status code of 401, however, that lets the calling
+     * code know that the session has expired and the token needs to be renewed.
+     * 
+     * @return the HTTPResponse with a 401 status code
+     */
+    private HTTPResponse createSessionExpiredResponse() {
+        // Create a fake unsuccessful authentication response
+        HttpResponse response = new HttpResponse();
+        response.setStatusCode(401);
+        response.setHeader('Content-Type', 'application/json');
+
+        Map<String,Object> apiResponse = new Map<String,Object>();
+        apiResponse.put('errors', SESSION_EXPIRED_MESSAGE);       
+        response.setBody(JSON.serialize(apiResponse));
+        
+        return response;
+    }    
 }
+
