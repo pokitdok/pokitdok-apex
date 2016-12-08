@@ -1,10 +1,10 @@
-PokitDok Platform API Client for Salesforce APEX 
+PokitDok Platform API Client for Salesforce Apex
 ================================================
 
 Resources
 ---------
 
-Please see the documentation_ for detailed information on all of the PokitDok Platform APIs.  The documentation includes APEX client examples for each of the implemented APIs.
+Please see the documentation_ for detailed information on all of the PokitDok Platform APIs.  The documentation includes Apex client examples for each of the implemented APIs.
 
 Report API client issues_ on GitHub
 

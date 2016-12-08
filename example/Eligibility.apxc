@@ -6,7 +6,8 @@
  * 
  * {!REQUIRESCRIPT("/soap/ajax/25.0/connection.js")}
  * {!REQUIRESCRIPT("/soap/ajax/25.0/apex.js")}
- * var result = sforce.apex.execute("Eligibility","runEligibilityCheck",{});
+ * var patientId='{!Patient__c.Name}';
+ * var result = sforce.apex.execute("Eligibility","runEligibilityCheck",{patientID: patientId});
  * alert(result);
  * window.location.reload();
  * sforce.debug.trace=true;
@@ -31,10 +32,11 @@ global with sharing class Eligibility {
      * payload with the patient's PHI, executes the eligibility method and does something 
      * meaningful with the JSON response.
      */
-    webservice static String runEligibilityCheck() {
+    webservice static String runEligibilityCheck(String patientID) {
+        
         // Use the PokitDok API Client to make an eligibility request
         PokitDokAPIClient pokitdok = new PokitDokAPIClient(CLIENT_ID, CLIENT_SECRET);
-        String eligibilityRequest = buildEligibilityRequest();
+        String eligibilityRequest = buildEligibilityRequest(patientID);
         String eligibilityResponse = pokitdok.eligibility(eligibilityRequest);
         
         // Check for errors
@@ -45,11 +47,11 @@ global with sharing class Eligibility {
                 (parser.getText() == 'error') || (parser.getText() == 'errors')) {
                     return 'Unable to process your eligibility request at this time.  The ' +
                         'original request has been logged.';
-                }
+            }
         }
         
         // Otherwise, do something meaningful with the response
-        return parseEligibilityResponse(eligibilityResponse);
+        return parseEligibilityResponse(eligibilityResponse, patientID);
     }
     
     /**
@@ -75,15 +77,32 @@ global with sharing class Eligibility {
      * 
      * @return the serialized JSON to send to the eligibility endpoint
      */
-    private static String buildEligibilityRequest() {        
+    private static String buildEligibilityRequest(String patientID) {
+        
+        Patient__c patient = [select Id, Name, Birth_Date__c, First_Name__c, Last_Name__c,
+                              Member_ID__c, Payer__c 
+                              from Patient__c 
+                              where Name = :patientID];
+        
+        String birthYear = String.valueof(patient.Birth_Date__c.year());
+        String birthMonth = String.valueof(patient.Birth_Date__c.month());
+        String birthDay = String.valueof(patient.Birth_Date__c.day());
+        if(birthMonth.length() == 1) {
+          birthMonth = '0' + birthMonth;
+        }
+        if(birthDay.length() ==1 ) {
+          birthDay = '0' + birthDay;
+        }
+        String birthDate = birthYear + '-' + birthMonth +  + '-' + birthDay;
+        
         // Create the object map
         Map<String,Object> eligibilityRequest = new Map<String,Object>();
         
-        Map<String,String> member = new Map<String,String>();
-        member.put('birth_date', '1970-01-01');
-        member.put('first_name', 'John');
-        member.put('last_name', 'Smith');
-        member.put('id', '3141592653');
+        Map<String,String> member = new Map<String,String>();        
+        member.put('birth_date', birthDate);
+        member.put('first_name', patient.First_Name__c);
+        member.put('last_name', patient.Last_Name__c);
+        member.put('id', patient.Member_ID__c);
         eligibilityRequest.put('member',member);
         
         Map<String,String> provider = new Map<String,String>();
@@ -92,7 +111,7 @@ global with sharing class Eligibility {
         provider.put('npi', '1467560003');
         eligibilityRequest.put('provider',provider);
         
-        eligibilityRequest.put('trading_partner_id','MOCKPAYER');        
+        eligibilityRequest.put('trading_partner_id', patient.Payer__c);        
         
         // Serialize to JSON
         return JSON.serialize(eligibilityRequest);
@@ -108,7 +127,13 @@ global with sharing class Eligibility {
      * @param response is the JOSN response from the eligibilty request
      * @return some meaningful text to send back to the end user
      */
-    private static String parseEligibilityResponse(String response) {
+    private static String parseEligibilityResponse(String response, String patientID) {
+        
+        Patient__c patient = [select Id, Name, Birth_Date__c, First_Name__c, Last_Name__c,
+                              Member_ID__c, Payer__c 
+                              from Patient__c 
+                              where Name = :patientID];
+        
         String meaningfulResponse = '';
         boolean isActive = false;
         Date planBeginDate = null;
@@ -121,13 +146,17 @@ global with sharing class Eligibility {
                 (parser.getText() == 'active')) {
                     parser.nextToken();
                     isActive = parser.getBooleanValue();
-                }
+                    patient.Active_Coverage__c = isActive;
+            }
             if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
                 (parser.getText() == 'plan_begin_date')) {
                     parser.nextToken();
                     planBeginDate = parser.getDateValue();
-                }
+                    patient.Plan_Begin_Date__c = planBeginDate;
+            }
         }
+        
+        update patient;
         
         // Asssemble the message
         if (isActive) {
@@ -139,5 +168,5 @@ global with sharing class Eligibility {
         }
         
         return meaningfulResponse;
-    }    
+    }  
 }
