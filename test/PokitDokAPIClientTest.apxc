@@ -13,6 +13,31 @@
 @isTest
 public class PokitDokAPIClientTest {
    
+    public final static String TEST_CLIENT_ID = 'ClientID';
+    public final static String TEST_CLIENT_SECRET = 'ClientSecret';
+    
+    /**
+     * The testAutoRenewalSetting method tests how the autoRenewSession flag is set in
+     * the constructors. 
+     */
+    @isTest 
+    static void testAutoRenewalSetting() {
+        // Verify the Platform Cache Partition won't be used
+        PokitDokAPIClient pokitDok = new PokitDokAPIClient(TEST_CLIENT_ID, TEST_CLIENT_SECRET);
+        Boolean autoRenewSession = pokitDok.autoRenewSession;        
+        System.assertEquals(autoRenewSession, false);
+        
+        pokitDok = new PokitDokAPIClient(TEST_CLIENT_ID, TEST_CLIENT_SECRET, false);
+        autoRenewSession = pokitDok.autoRenewSession;
+        System.assertEquals(autoRenewSession, false);
+        
+        // Verify the Platform Cache Partition will be used
+        pokitDok = new PokitDokAPIClient(TEST_CLIENT_ID, TEST_CLIENT_SECRET, true);
+        autoRenewSession = pokitDok.autoRenewSession;        
+        System.assertEquals(autoRenewSession, true);
+    }
+    
+    
     /**
      * The testAuthentication method tests that the access token is on the response.
      * Since this test does not actually go across the wire, thge actual Client ID /
@@ -21,9 +46,12 @@ public class PokitDokAPIClientTest {
     @isTest 
     static void testAuthentication() {
         // Set mock callout class 
-        Test.setMock(HttpCalloutMock.class, new PokitDokMockResponseGenerator(false, false));        
-        PokitDokAPIClient pokitDok = new PokitDokAPIClient('clientID', 'clientSecret');
+        Test.setMock(HttpCalloutMock.class, new PokitDokMockResponseGenerator(false, false, 
+                                                                              false));
+        PokitDokAPIClient pokitDok = new PokitDokAPIClient(TEST_CLIENT_ID, TEST_CLIENT_SECRET, 
+                                                           true);
         String session_token = pokitDok.authenticate();
+        session_token = pokitDok.authenticate();
         
         // Verify the session access token has been set
         System.assertEquals(session_token, PokitDokMockResponseGenerator.ACCESS_TOKEN);
@@ -52,8 +80,10 @@ public class PokitDokAPIClientTest {
      */    
     @isTest static void testEligibility() {
         // Set mock callout class 
-        Test.setMock(HttpCalloutMock.class, new PokitDokMockResponseGenerator(false, false));        
-        PokitDokAPIClient pokitDok = new PokitDokAPIClient('clientId', 'clientSecret');
+        Test.setMock(HttpCalloutMock.class, 
+                     new PokitDokMockResponseGenerator(false, false, false));        
+        PokitDokAPIClient pokitDok = new PokitDokAPIClient(TEST_CLIENT_ID, TEST_CLIENT_SECRET, 
+                                                           true);
         
         // Create a test JSON request
         Map<String,Object> eligibilityRequest = new Map<String,Object>();
@@ -100,15 +130,50 @@ public class PokitDokAPIClientTest {
     }
 
     /**
+     * The testCalloutException method tests a borked HTTP connection.  The client 
+     * will return a manufactured JSON message will include a JSON field called 
+     * "error".
+     */
+    @isTest 
+    static void testCalloutException() {
+        // Set mock callout class 
+        Test.setMock(HttpCalloutMock.class, 
+                     new PokitDokMockResponseGenerator(true, false, false));        
+        PokitDokAPIClient pokitDok = new PokitDokAPIClient(TEST_CLIENT_ID, TEST_CLIENT_SECRET, 
+                                                           false);        
+
+        // Create an empty test JSON request
+        Map<String,Object> eligibilityRequest = new Map<String,Object>();
+        String eligibilityResponse = pokitDok.eligibility(JSON.serialize(eligibilityRequest));
+        
+        // Verify there is an error message in the JSON response
+        System.assert(eligibilityResponse != null);
+        String expectedCalloutExceptionMessage = '';
+        
+        JSONParser parser = JSON.createParser(eligibilityResponse);
+        while (parser.nextToken() != null) {
+            if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
+                (parser.getText() == 'error')) {
+                parser.nextToken();
+                expectedCalloutExceptionMessage = parser.getText();
+                System.assertEquals(expectedCalloutExceptionMessage, 
+                                    PokitDokAPIClient.CALLOUT_EXCEPTION_MESSAGE);
+            }
+        }
+    }
+    
+    /**
      * The testUnsuccessfulResponse method tests an HTTP response with a status code
-     * other than 200.  The client will simply return the error message it received
-     * from the APIs.  The message will include a JSON field called "errors".
+     * other than 200 and 401.  The client will simply return the error message it
+     * received from the APIs.  The message will include a JSON field called "errors".
      */
     @isTest 
     static void testUnsuccessfulResponse() {
         // Set mock callout class 
-        Test.setMock(HttpCalloutMock.class, new PokitDokMockResponseGenerator(false, true));        
-        PokitDokAPIClient pokitDok = new PokitDokAPIClient('clientID', 'clientSecret');
+        Test.setMock(HttpCalloutMock.class, 
+                     new PokitDokMockResponseGenerator(false, true, false));        
+        PokitDokAPIClient pokitDok = new PokitDokAPIClient(TEST_CLIENT_ID, TEST_CLIENT_SECRET, 
+	                                                       false);
 
         // Create an empty test JSON request
         Map<String,Object> eligibilityRequest = new Map<String,Object>();
@@ -129,35 +194,47 @@ public class PokitDokAPIClientTest {
             }
         }
     }
-    
+
     /**
-     * The testCalloutException method tests a borked HTTP connection.  The client 
-     * will return a manufactured JSON message will include a JSON field called 
-     * "error".
+     * The testSessionExpired method tests an HTTP response with a status code of 401.
+     * The client will try to replay the request after reauthenticating.  
+     * This is almost a complete.  Warm the cache with a fake session token to clear
+     * first call to authenticate().  It will come back with a token from the cache.
+     * When the actual request is made a 401 is returned, and the cache will be flushed
+     * and the authenticate() will be called again.  In the real world, this will
+     * succeed, but in this test, the second authenticate API call will also return
+     * a 401 response as well, so technically the second transaction is not replayed.
      */
     @isTest 
-    static void testCalloutException() {
+    static void testSessionExpired() {
+        // Warm the cache with a fake expired session token
+        PokitDokSessionCacheManager sessionManager = new PokitDokSessionCacheManager(TEST_CLIENT_ID);
+        sessionManager.putToken('EXPIRED_TOKEN');
+
         // Set mock callout class 
-        Test.setMock(HttpCalloutMock.class, new PokitDokMockResponseGenerator(true, false));        
-        PokitDokAPIClient pokitDok = new PokitDokAPIClient('clientID', 'clientSecret');
+        Test.setMock(HttpCalloutMock.class, 
+                     new PokitDokMockResponseGenerator(false, false, true));
+        PokitDokAPIClient pokitDok = new PokitDokAPIClient(TEST_CLIENT_ID, TEST_CLIENT_SECRET, 
+                                                           true);        
 
         // Create an empty test JSON request
         Map<String,Object> eligibilityRequest = new Map<String,Object>();
         String eligibilityResponse = pokitDok.eligibility(JSON.serialize(eligibilityRequest));
-        
+                
         // Verify there is an error message in the JSON response
         System.assert(eligibilityResponse != null);
-        String expectedCalloutExceptionMessage = '';
+        String expectedUnsuccessfulMessage = '';
         
         JSONParser parser = JSON.createParser(eligibilityResponse);
         while (parser.nextToken() != null) {
             if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
-                (parser.getText() == 'error')) {
+                (parser.getText() == 'errors')) {
                 parser.nextToken();
-                expectedCalloutExceptionMessage = parser.getText();
-                System.assertEquals(expectedCalloutExceptionMessage, 
-                                    PokitDokAPIClient.CALLOUT_EXCEPTION_MESSAGE);
+                expectedUnsuccessfulMessage = parser.getText();
+                System.assertEquals(expectedUnsuccessfulMessage, 
+                                    PokitDokMockResponseGenerator.SESSION_EXPIRED_MESSAGE);
             }
         }
-    }    
+    } 
 }
+

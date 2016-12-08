@@ -21,7 +21,7 @@
  * Please see the License.txt file for more information.
  * All other rights reserved.
  */
-public class PokitDokAPIClient {   
+public class PokitDokAPIClient {
     
     // URL endpoints
     public static final String POKITDOK_BASE_URL = 'https://platform.pokitdok.com';
@@ -31,9 +31,11 @@ public class PokitDokAPIClient {
     public static final String CALLOUT_EXCEPTION_MESSAGE = 'Unable to process your ' +
         'request at this time. The original request has been logged';
     
-    // The OAuth credentials
+    // Session management
     private String clientID;
     private String clientSecret;
+    public Boolean autoRenewSession { get; set; }
+    public PokitDokSessionCacheManager sessionManager = null;
     
     /**
      * The constructor expects valid OAuth credentials.
@@ -41,22 +43,58 @@ public class PokitDokAPIClient {
      * @param the id is Client ID for the PokitDok Platform App
      * @param the secret is Client Secret for the PokitDok Platform App
      */
-    public PokitDokAPIClient(String id, String secret) {
-        clientID = id;
-        clientSecret = secret;
+    public PokitDokAPIClient(String clientID, String clientSecret) {
+        this.clientID = clientID;
+        this.clientSecret = clientSecret;
+        this.autoRenewSession = false;
+    }
+
+    /**
+     * The constructor expects valid OAuth credentials and a flag to determine if the
+     * access token should be cached and renewed when it expires.
+     * 
+     * @param the id is Client ID for the PokitDok Platform App
+     * @param the secret is Client Secret for the PokitDok Platform App
+     * @param should the session access token be cached and the session be renewed
+     *        after the token expires
+     */
+    public PokitDokAPIClient(String clientID, String clientSecret, Boolean autoRenewSession) {
+        this.clientID = clientID;
+        this.clientSecret = clientSecret;
+        this.autoRenewSession = autoRenewSession;
+        
+        if (autoRenewSession) {
+            sessionManager = new PokitDokSessionCacheManager(clientID);
+
+            // Make sure the Platform Cache is set up properly
+            if (!sessionManager.cacheEnabled) {
+                this.autoRenewSession = false;
+            }
+        }
     }
     
     /**
      * The authenticate method encapsulates OAuth requests and returns the session access
      * token to be used by subsequent API calls.
      * 
-     * Note:  The present version will retrieve a fresh access token for every API request.
-     * Future versions will cache the access token in local storage for usage.  If the 
-     * status code of the API call is 401, only then will the access token be requested.
+     * Authentication works one of two ways.  You can exercise the option to utilize the
+     * Salesforce Platform Cache to store the session access token for future requests,
+     * or you can authenticate with each request.  Caching is preferred if possible.
      * 
-     * @return the access token if authenticated; an empty String otherwise
+     * @return the session access token if authenticated; an empty String otherwise
      */
     public String authenticate() {
+        String accessToken = '';
+        
+        // Check the cache for the access token
+        if (autoRenewSession) {
+            accessToken = sessionManager.getToken();
+            if (accessToken != null) {
+                return accessToken;
+            }
+        }
+        
+        // Retrieve the access token
         Http http = new Http();
         HttpRequest request = new HttpRequest();
         HTTPResponse response = new HttpResponse();
@@ -79,10 +117,8 @@ public class PokitDokAPIClient {
         try {
             response = http.send(request);
         } catch(System.CalloutException e) {
-            System.debug(Logginglevel.ERROR, 
-                         '[PokitDokAPIClient]  Error Message: ' + e);
-            System.debug(Logginglevel.ERROR, 
-                         '[PokitDokAPIClient]  POST Request: ' + request.getBody());
+            processCalloutException(e, request);
+            return '';
         }
         
         // Dig out the access token from the response payload
@@ -90,12 +126,18 @@ public class PokitDokAPIClient {
         while (parser.nextToken() != null) {
             if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
                 (parser.getText() == 'access_token')) {
-                    parser.nextToken();
-                    String sessionToken = parser.getText();
-                    return sessionToken;                    
+                parser.nextToken();
+                accessToken = parser.getText();
+
+                // Cache the token for future requests
+                if (autoRenewSession) {
+                    sessionManager.putToken(accessToken);
                 }
+                
+                return accessToken;                    
+            }
         }
-        
+                
         return '';
     }
     
@@ -112,26 +154,38 @@ public class PokitDokAPIClient {
         HTTPResponse response = new HttpResponse();
         
         // Authenticate before making the API call
-        String sessionToken = authenticate();        
-        if (sessionToken != '') {
+        String accessToken = authenticate();        
+        if (accessToken != '') {
             // Set up the request to the PokitDok Platform POST endpoint
             request.setEndpoint(APIEndpoint);
             request.setMethod('POST');
-            request.setHeader('Authorization', 'Bearer ' + sessionToken);
+            request.setHeader('Authorization', 'Bearer ' + accessToken);
             request.setHeader('Content-Type', 'application/json');
             request.setBody(requestPayload);
             
             try {
                 response = http.send(request);
             } catch(System.CalloutException e) {
-                System.debug(Logginglevel.ERROR, 
-                             '[PokitDokAPIClient]  Error Message: ' + e);
-                System.debug(Logginglevel.ERROR, 
-                             '[PokitDokAPIClient]  POST Request: ' + request.getBody());
-                return '{ "error": ' + CALLOUT_EXCEPTION_MESSAGE + ' }';
+                return processCalloutException(e, request);
             }
             
-            // Log bad responses
+            // If the session has expired, flush the cache, renew the access token and
+            // replay the transaction
+            if (response.getStatusCode() == 401) {
+                if (sessionManager.removeToken()) {
+                    accessToken = authenticate();
+                    if (accessToken != '') {
+                        request.setHeader('Authorization', 'Bearer ' + accessToken);
+                        try {
+                            response = http.send(request);
+                        } catch(System.CalloutException e) {
+                            return processCalloutException(e, request);
+                        }
+                    }
+                }
+            }
+            
+            // Log bad responses            
             if (response.getStatusCode() != 200) {
                 System.debug(Logginglevel.ERROR, 
                              '[PokitDokAPIClient]  POST Request: ' + request.getBody());
@@ -155,4 +209,22 @@ public class PokitDokAPIClient {
         String endpoint = POKITDOK_BASE_URL + ELIGIBILITY_ENDPOINT;
         return post(endpoint, serializedJSON);
     }
+    
+    /**
+     * The processCalloutException method handles the event of a CalloutException being
+     * thrown.  It spools out the exception message to the error log
+     * 
+     * @param the thrown CalloutException
+     * @param the request that caused the exception to be thrown
+     * @return the error message to be consumed programatically
+     */
+    private String processCalloutException(System.CalloutException e, 
+                                           HTTPRequest request) {
+        System.debug(Logginglevel.ERROR, 
+                     '[PokitDokAPIClient.processCalloutException]  Error Message: ' + e);
+        System.debug(Logginglevel.ERROR, 
+                     '[PokitDokAPIClient.processCalloutException]  POST Request: ' + request.getBody());
+        return '{ "error": ' + CALLOUT_EXCEPTION_MESSAGE + ' }';        
+    }
 }
+

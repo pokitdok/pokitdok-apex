@@ -1,0 +1,111 @@
+/**
+ * The PokitDokSessionCacheManager class manages the storage and retrieval of
+ * the OAuth access token for session management with the PokitDok Platform.
+ * It employs the Salesforce Platform Cache, a new feature available to 
+ * Enterprise, Unlimited, and Performance editions.  This Cache Manager uses
+ * the Org Cache which allows for the storage of the session access token for
+ * users across the organization.
+ *
+ * For more information, see: https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_cache_namespace_overview.htm
+ * 
+ * Copyright (C) 2016, All Rights Reserved, PokitDok, Inc.
+ * https://platform.pokitdok.com
+ *
+ * Please see the License.txt file for more information.
+ * All other rights reserved.
+ */
+public class PokitDokSessionCacheManager {
+    
+    // The PokitDok Platform session is only alive for an hour, so set the
+    // cache time to live appropriately
+    private final integer TIME_TO_LIVE = 3600;
+    
+    // A flag for calling code to determine if the Platform Cache is available
+    // for usage
+    public Boolean cacheEnabled { get; set; }
+    
+    // The default cache partition
+    private Cache.OrgPartition cachePartition = null;
+        
+    // The cache key: 'PokitDokAccessToken' + clientID
+    private String accessTokenCacheKey;
+        
+    /**
+     * The constructor takes in the Client ID.  This allows organizations that
+     * have multiple PokitDok Platform Apps to each store their own session access
+     * token in the cache.
+     *
+     * @param the Client ID of the PokitDok Platform App.
+     */
+    public PokitDokSessionCacheManager(String clientID) {
+        this.cacheEnabled = false;
+        
+        // See if a cache partition is available.  If it is, set the flag and define
+        // the cache key
+        String defaultPartition = Cache.Org.getName();
+        if (defaultPartition != '') {
+            cacheEnabled = true;
+            cachePartition = Cache.Org.getPartition(defaultPartition);
+            accessTokenCacheKey = 'PokitDokAccessToken' + clientID;
+        }
+    }
+
+    /**
+     * The getCacheStatistics method provides some diagnostics around the cache.
+     * This feature is apparently new in Salesforce and this data might be useful
+     * to inspect.
+     * 
+     * @return a map of data about the state of the cache
+     */
+    public Map<String, Object> getCacheStatistics() {
+        Map<String, Object> cacheStatistics = new Map<String, Object>();
+        cacheStatistics.put('default_partition', Cache.Org.getName());
+    	cacheStatistics.put('capacity', Cache.Org.getCapacity());
+        cacheStatistics.put('number_of_keys', Cache.Org.getNumKeys());
+        cacheStatistics.put('keys', Cache.Org.getKeys());
+        cacheStatistics.put('miss_rate', Cache.Org.getMissRate());
+        cacheStatistics.put('average_get_time', Cache.Org.getAvgGetTime());
+        cacheStatistics.put('max_get_time', Cache.Org.getMaxGetTime());
+        return cacheStatistics;
+    }
+    
+    /**
+     * The getToken method abstracts the retrieval of the session access token.
+     * 
+     * @return the token from cache if available
+     */
+    public String getToken() {
+        if (!cacheEnabled) {
+            return null;
+        }
+                
+        return (String) cachePartition.get(accessTokenCacheKey);
+    }
+
+    /**
+     * The putToken method abstracts the storage of the session access token.
+     * 
+     * @param the value of the session access token to cache
+     */
+    public void putToken(String value) {
+        if (!cacheEnabled) {
+            return;
+        }
+
+        cachePartition.put(accessTokenCacheKey, value, TIME_TO_LIVE, Cache.Visibility.ALL, false);
+    }
+
+    /**
+     * The removeToken method abstracts the removal of the session access token.
+     *
+     * @return if the removal was successful
+     */
+    public Boolean removeToken() {
+        if (!cacheEnabled) {
+            return false;
+        }
+        
+        return cachePartition.remove(accessTokenCacheKey);        
+    }
+}
+

@@ -24,8 +24,8 @@
 global with sharing class Eligibility {    
  
     // These are your credentials
-    static final String CLIENT_ID = '<YOUR_CLIENT_ID>';
-    static final String CLIENT_SECRET = '<YOUR_CLIENT_SECRET>';
+    static final String CLIENT_ID = 'bbVYgUxvBfN7vro7viOT';
+    static final String CLIENT_SECRET = 'lSVEDN1y9nonyGepW13PnbCBcOReiS5fTEVXMN4g';
     
     /**
      * The runEligibilityCheck() method instantiates the API Client, manufactures a JSON
@@ -35,9 +35,10 @@ global with sharing class Eligibility {
     webservice static String runEligibilityCheck(String patientID) {
         
         // Use the PokitDok API Client to make an eligibility request
-        PokitDokAPIClient pokitdok = new PokitDokAPIClient(CLIENT_ID, CLIENT_SECRET);
+        PokitDokAPIClient pokitdok = new PokitDokAPIClient(CLIENT_ID, CLIENT_SECRET, true);
         String eligibilityRequest = buildEligibilityRequest(patientID);
         String eligibilityResponse = pokitdok.eligibility(eligibilityRequest);
+        //System.debug('[Eligibility]  autoRenewSession: ' + pokitdok.autoRenewSession);
         
         // Check for errors
         String errorMessage = null;
@@ -135,7 +136,7 @@ global with sharing class Eligibility {
                               where Name = :patientID];
         
         String meaningfulResponse = '';
-        boolean isActive = false;
+        Boolean isActive = false;
         Date planBeginDate = null;
         
         // Parse the response, extracting the active flag and the date that plan coverage
@@ -170,3 +171,4 @@ global with sharing class Eligibility {
         return meaningfulResponse;
     }  
 }
+
