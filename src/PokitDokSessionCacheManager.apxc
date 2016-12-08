@@ -60,7 +60,7 @@ public class PokitDokSessionCacheManager {
     public Map<String, Object> getCacheStatistics() {
         Map<String, Object> cacheStatistics = new Map<String, Object>();
         cacheStatistics.put('default_partition', Cache.Org.getName());
-    	cacheStatistics.put('capacity', Cache.Org.getCapacity());
+        cacheStatistics.put('capacity', Cache.Org.getCapacity());
         cacheStatistics.put('number_of_keys', Cache.Org.getNumKeys());
         cacheStatistics.put('keys', Cache.Org.getKeys());
         cacheStatistics.put('miss_rate', Cache.Org.getMissRate());
