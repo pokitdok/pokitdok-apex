@@ -69,7 +69,7 @@ The Salesforce Platform Cache lets you store and retrieve data that is shared ac
 
 Unlike session cache, org cache is accessible across sessions, requests, and org users and profiles. Org cache expires when its specified time-to-live is reached, in this case, 60 minutes.
 
-If your organization has not set up a default cache partition by following these steps.
+If your organization has not set up a default cache partition, you may do so by following these steps.
 
 Navigate: ``Setup`` > ``Platform Cache`` > ``New Platform Cache Partition``
 
