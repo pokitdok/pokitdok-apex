@@ -105,7 +105,7 @@ You should also see the ``Active Coverage`` and ``Plan Begin Date`` fields updat
 License
 -------
 
-Copyright (c) 2016 PokitDok, Inc.  See LICENSE_ for details.
+Copyright (c) 2017 PokitDok, Inc.  See LICENSE_ for details.
 
 .. _documentation: https://platform.pokitdok.com/documentation/v4/?apex#
 .. _issues: https://github.com/pokitdok/pokitdok-apex/issues
