@@ -74,8 +74,8 @@ public class PokitDokAPIClient {
     }
     
     /**
-     * The authenticate method encapsulates OAuth requests and returns the session access
-     * token to be used by subsequent API calls.
+     * The fetchAccessToken method encapsulates OAuth requests and returns the session
+     * access token to be used by subsequent API calls.
      * 
      * Authentication works one of two ways.  You can exercise the option to utilize the
      * Salesforce Platform Cache to store the session access token for future requests,
@@ -83,7 +83,7 @@ public class PokitDokAPIClient {
      * 
      * @return the session access token if authenticated; an empty String otherwise
      */
-    public String authenticate() {
+    public String fetchAccessToken() {
         String accessToken = '';
         
         // Check the cache for the access token
@@ -154,7 +154,7 @@ public class PokitDokAPIClient {
         HTTPResponse response = new HttpResponse();
         
         // Authenticate before making the API call
-        String accessToken = authenticate();        
+        String accessToken = fetchAccessToken();        
         if (accessToken != '') {
             // Set up the request to the PokitDok Platform POST endpoint
             request.setEndpoint(APIEndpoint);
@@ -173,7 +173,7 @@ public class PokitDokAPIClient {
             // replay the transaction
             if (response.getStatusCode() == 401) {
                 if (sessionManager.removeToken()) {
-                    accessToken = authenticate();
+                    accessToken = fetchAccessToken();
                     if (accessToken != '') {
                         request.setHeader('Authorization', 'Bearer ' + accessToken);
                         try {
@@ -227,4 +227,3 @@ public class PokitDokAPIClient {
         return '{ "error": ' + CALLOUT_EXCEPTION_MESSAGE + ' }';        
     }
 }
-
