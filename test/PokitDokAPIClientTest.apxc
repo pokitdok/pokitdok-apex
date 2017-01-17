@@ -46,11 +46,11 @@ public class PokitDokAPIClientTest {
     @isTest 
     static void testAuthentication() {
         // Set mock callout class 
-        Test.setMock(HttpCalloutMock.class, 
-	             new PokitDokMockResponseGenerator(false, false, false));
+        Test.setMock(HttpCalloutMock.class, new PokitDokMockResponseGenerator(false, false, 
+                                                                              false));
         PokitDokAPIClient pokitDok = new PokitDokAPIClient(TEST_CLIENT_ID, TEST_CLIENT_SECRET, 
                                                            true);
-        String session_token = pokitDok.authenticate();
+        String session_token = pokitDok.fetchAccessToken();
         
         // Verify the session access token has been set
         System.assertEquals(session_token, PokitDokMockResponseGenerator.ACCESS_TOKEN);
@@ -236,4 +236,3 @@ public class PokitDokAPIClientTest {
         }
     } 
 }
-
