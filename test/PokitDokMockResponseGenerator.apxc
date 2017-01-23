@@ -14,9 +14,18 @@
 public class PokitDokMockResponseGenerator implements HttpCalloutMock {
     
     // Test constants
+    // GET
+    public final static String ACTIVITIES_ID = '11111111';
+    public final static String ACTIVITIES_NAME = 'eligibility';
+    
+    // Fetch access token
     public final static String ACCESS_TOKEN = 'POKIT_TOKEN';
-    public final static String ACTIVITY_ID = '11111111';
-    public final static String CORRELATION_ID = '99999999';
+    
+    // Eligibility
+    public final static String ELIGIBILITY_ACTIVITY_ID = '11111111';
+    public final static String ELIGIBILITY_CORRELATION_ID = '99999999';
+    
+    // Boundary conditions
     public final static String UNSUCCESSFUL_MESSAGE = 'Unprocessable Entity';
     public final static String SESSION_EXPIRED_MESSAGE = 'Unauthorized';
     
@@ -47,36 +56,69 @@ public class PokitDokMockResponseGenerator implements HttpCalloutMock {
      * @return a mocked HTTPResponse
      */
     public HTTPResponse respond(HTTPRequest request) {
+        HttpResponse response = new HttpResponse();
+        
         // Throw an exception for testing an HTTP error
         if (isExceptionThrown) {
             CalloutException e = (CalloutException)CalloutException.class.newInstance();
             e.setMessage('Mock CalloutException thrown.');
             throw e;
         }
-
+               
         // Create a mocked response for testing an unsuccessful response
         if (isResponseUnsuccessful) {
             return createUnsuccessfulResponse();   
         }
-
+              
         // Create a mocked response for testing a session expiring
         if (hasSessionExpired) {
             return createSessionExpiredResponse();   
         }
+ 
+        // Create a mocked response for testing GET requests
+        if (request.getMethod() == PokitDokAPIClient.GET_METHOD) {
+            response = createGetResponse();        
+        }
         
-        // Create a mocked response for testing authentication
-        HttpResponse response = new HttpResponse();
+        // Create a mocked response for testing authentication        
         if (request.getEndpoint() == PokitDokAPIClient.POKITDOK_BASE_URL + 
                                      PokitDokAPIClient.AUTHENTICATION_ENDPOINT) {                                         
             response = createAuthenticationResponse();
         }
         
-        // Create a mocked response for testing an eligibility request
+        // Create a mocked response for testing an eligibility request, which tests
+        // POST requests
         if (request.getEndpoint() == PokitDokAPIClient.POKITDOK_BASE_URL + 
-                                     PokitDokAPIClient.ELIGIBILITY_ENDPOINT) {			
-            response = createEligibilityResponse();            
+                                     PokitDokAPIClient.ELIGIBILITY_ENDPOINT) {
+            response = createEligibilityResponse();
         }
+        
+        return response;
+    }
+    
+    /**
+     * The createGetResponse method creates a mocked HTTPResponse to an endpoint
+     * accepting GET requests.  Namely it creates a fake list of activities.
+     * 
+     * @return the HTTPResponse with the activities data
+     */
+    private HTTPResponse createGetResponse() {
+        // Create a fake GET response
+        HttpResponse response = new HttpResponse();
+        response.setStatusCode(200);
+        response.setHeader('Content-Type', 'application/json');
 
+        Map<String,Object> getResponse = new Map<String,Object>();
+        
+        List<Map<String,Object>> activities = new List<Map<String,Object>>();
+        Map<String,Object> activity = new Map<String,Object>();
+        activity.put('id', ACTIVITIES_ID);
+        activity.put('name', ACTIVITIES_NAME);
+        activities.add(activity);
+        
+        getResponse.put('data', activities);       
+        response.setBody(JSON.serialize(getResponse));
+        
         return response;
     }
     
@@ -117,11 +159,11 @@ public class PokitDokMockResponseGenerator implements HttpCalloutMock {
         Map<String,Object> eligibilityResponse = new Map<String,Object>();
         
         Map<String,Object> meta = new Map<String,Object>();
-        meta.put('activity_id', ACTIVITY_ID);
+        meta.put('activity_id', ELIGIBILITY_ACTIVITY_ID);
         eligibilityResponse.put('meta', meta);
         
         Map<String,Object> data = new Map<String,Object>();
-        data.put('correlation_id', CORRELATION_ID);
+        data.put('correlation_id', ELIGIBILITY_CORRELATION_ID);
         eligibilityResponse.put('data', data);    
         
         response.setBody(JSON.serialize(eligibilityResponse));
@@ -168,4 +210,3 @@ public class PokitDokMockResponseGenerator implements HttpCalloutMock {
         return response;
     }    
 }
-

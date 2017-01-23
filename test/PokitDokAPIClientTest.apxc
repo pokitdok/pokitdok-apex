@@ -4,7 +4,7 @@
  * responses from the method calls are all mocked.  The mocked responses are produced
  * by the PokitDokMockResponseGenerator.
  * 
- * Copyright (C) 2016, All Rights Reserved, PokitDok, Inc.
+ * Copyright (C) 2017, All Rights Reserved, PokitDok, Inc.
  * https://platform.pokitdok.com
  *
  * Please see the License.txt file for more information.
@@ -37,14 +37,72 @@ public class PokitDokAPIClientTest {
         System.assertEquals(autoRenewSession, true);
     }
     
+    /**
+     * The testGet method tests the retrieval of a response from a GET request.  Since this
+     * test does not actually go across the wire, the actual Client ID / Client Secret 
+     * credentials are _not_ required.  The mocked response will look like this:
+     * 
+     * {
+     *     "data": [{
+     *         "id": "11111111",
+     *         "name": "eligibility"
+     *     }]
+     * }
+     */
+    @isTest 
+    static void testGet() {
+        // Set mock callout class 
+        Test.setMock(HttpCalloutMock.class, new PokitDokMockResponseGenerator(false, false, 
+                                                                              false));        
+        PokitDokAPIClient pokitDok = new PokitDokAPIClient(TEST_CLIENT_ID, TEST_CLIENT_SECRET, 
+                                                           true);
+        String getRequestURL = PokitDokAPIClient.POKITDOK_BASE_URL + 
+                               PokitDokAPIClient.ACTIVITIES_ENDPOINT;
+        String getResponse = pokitDok.get(getRequestURL);
+        
+        // Verify just a few fields in the JSON response
+        System.assert(getResponse != null);
+        Boolean foundExpectedAcvitityID = False;
+        Boolean foundExpectedActivityName = False;
+        Integer activitiesFound = 0;
+        
+        // The response data is a list of dictionaries
+        JSONParser parser = JSON.createParser(getResponse);
+        while (parser.nextToken() != null) { 
+            if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
+                (parser.getText() == 'data')) {
+                parser.nextToken();
+                if (parser.getCurrentToken() == JSONToken.START_ARRAY) {       
+                    while (parser.nextToken() != null) {
+                        if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
+                            (parser.getText() == 'id')) {
+                            parser.nextToken();
+                            if (parser.getText() == PokitDokMockResponseGenerator.ACTIVITIES_ID) {
+                                foundExpectedAcvitityID = True;
+                            }
+                        }
+                        if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
+                            (parser.getText() == 'name')) {
+                            parser.nextToken();
+                            if (parser.getText() == PokitDokMockResponseGenerator.ACTIVITIES_NAME) {
+                                foundExpectedActivityName = True;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        System.assert(foundExpectedAcvitityID);
+        System.assert(foundExpectedActivityName);
+    }
     
     /**
-     * The testAuthentication method tests that the access token is on the response.
+     * The testFetchAccessToken method tests that the access token is on the response.
      * Since this test does not actually go across the wire, thge actual Client ID /
      * Client Secret credentials are _not_ required.
      */
     @isTest 
-    static void testAuthentication() {
+    static void testFetchAccessToken() {
         // Set mock callout class 
         Test.setMock(HttpCalloutMock.class, new PokitDokMockResponseGenerator(false, false, 
                                                                               false));
@@ -116,14 +174,14 @@ public class PokitDokAPIClientTest {
                 parser.nextToken();
                 expectedActivityID = parser.getText();
                 System.assertEquals(expectedActivityID, 
-                                    PokitDokMockResponseGenerator.ACTIVITY_ID);
+                                    PokitDokMockResponseGenerator.ELIGIBILITY_ACTIVITY_ID);
             }
             if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
                 (parser.getText() == 'correlation_id')) {
                 parser.nextToken();
                 expectedCorrelationID = parser.getText();
                 System.assertEquals(expectedCorrelationID, 
-                                    PokitDokMockResponseGenerator.CORRELATION_ID);
+                                    PokitDokMockResponseGenerator.ELIGIBILITY_CORRELATION_ID);
             }
         }        
     }
