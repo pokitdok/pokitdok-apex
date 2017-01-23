@@ -15,7 +15,7 @@
  * For reference, see:
  * https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_callouts_remote_site_settings.htm
  * 
- * Copyright (C) 2016, All Rights Reserved, PokitDok, Inc.
+ * Copyright (C) 2017, All Rights Reserved, PokitDok, Inc.
  * https://platform.pokitdok.com
  *
  * Please see the License.txt file for more information.
@@ -25,7 +25,7 @@ public class PokitDokAPIClient {
     
     // URL endpoints
     public static final String POKITDOK_BASE_URL = 'https://platform.pokitdok.com/';
-    public static final String API_VERSION = 'api/v4/';
+    public static final String POKITDOK_API_VERSION = 'api/v4/';
     
     public static final String AUTHENTICATION_ENDPOINT = 'oauth2/token';
     public static final String ACTIVITIES_ENDPOINT = 'activities/';
@@ -55,9 +55,15 @@ public class PokitDokAPIClient {
     
     public static final String GET_METHOD = 'GET';
     public static final String POST_METHOD = 'POST';
-    
+        
     public static final String CALLOUT_EXCEPTION_MESSAGE = 'Unable to process your ' +
         'request at this time. The original request has been logged';
+    
+    // User Agent data
+    public static final String USER_AGENT_POKITDOK_CLIENT_NAME = 'pokitdok-apex';
+    public static final String USER_AGENT_POKITDOK_CLIENT_API_VERSION = '4';
+    public static final String USER_AGENT_SALESFORCE_OS_VERSION = 'Spring17';
+    public static final String USER_AGENT_SALESFORCE_API_VERSION = '38';
     
     // Session management
     private String clientID;
@@ -112,7 +118,7 @@ public class PokitDokAPIClient {
         if (endpoint == AUTHENTICATION_ENDPOINT) {
             return POKITDOK_BASE_URL + AUTHENTICATION_ENDPOINT;
         } else {
-            return POKITDOK_BASE_URL + API_VERSION + endpoint;
+            return POKITDOK_BASE_URL + POKITDOK_API_VERSION + endpoint;
         }
     }
     
@@ -137,7 +143,11 @@ public class PokitDokAPIClient {
             request.setEndpoint(getAPIURL(APIEndpoint));
             request.setMethod(method);
             request.setHeader('Authorization', 'Bearer ' + accessToken);
-            request.setHeader('Content-Type', 'application/json');
+            request.setHeader('Content-Type', 'application/json');            
+            request.setHeader('User-Agent', USER_AGENT_POKITDOK_CLIENT_NAME + '#' +
+                                            USER_AGENT_POKITDOK_CLIENT_API_VERSION  + '#' +
+                                            USER_AGENT_SALESFORCE_OS_VERSION + '#' +
+                                            USER_AGENT_SALESFORCE_API_VERSION);
             
             // GET requests will default to POST, even if the body is set to '', resulting
             // in a 405 response

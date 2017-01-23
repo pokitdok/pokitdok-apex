@@ -4,7 +4,7 @@
  * HttpCalloutMock interface and generate fake HTTPResponses for the various endpoints
  * of the PokitDok Platform.
  * 
- * Copyright (C) 2016, All Rights Reserved, PokitDok, Inc.
+ * Copyright (C) 2017, All Rights Reserved, PokitDok, Inc.
  * https://platform.pokitdok.com
  *
  * Please see the License.txt file for more information.

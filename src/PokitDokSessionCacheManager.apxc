@@ -8,7 +8,7 @@
  *
  * For more information, see: https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_cache_namespace_overview.htm
  * 
- * Copyright (C) 2016, All Rights Reserved, PokitDok, Inc.
+ * Copyright (C) 2017, All Rights Reserved, PokitDok, Inc.
  * https://platform.pokitdok.com
  *
  * Please see the License.txt file for more information.
@@ -60,12 +60,13 @@ public class PokitDokSessionCacheManager {
     public Map<String, Object> getCacheStatistics() {
         Map<String, Object> cacheStatistics = new Map<String, Object>();
         cacheStatistics.put('default_partition', Cache.Org.getName());
-        cacheStatistics.put('capacity', Cache.Org.getCapacity());
+    	cacheStatistics.put('capacity', Cache.Org.getCapacity());
         cacheStatistics.put('number_of_keys', Cache.Org.getNumKeys());
         cacheStatistics.put('keys', Cache.Org.getKeys());
         cacheStatistics.put('miss_rate', Cache.Org.getMissRate());
         cacheStatistics.put('average_get_time', Cache.Org.getAvgGetTime());
         cacheStatistics.put('max_get_time', Cache.Org.getMaxGetTime());
+
         return cacheStatistics;
     }
     
@@ -108,4 +109,3 @@ public class PokitDokSessionCacheManager {
         return cachePartition.remove(accessTokenCacheKey);        
     }
 }
-

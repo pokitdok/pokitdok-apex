@@ -15,7 +15,7 @@
  * The Client ID and Client Secret credentials passed into the API Client constructor are
  * obtained by signing up for free at https://platform.pokitdok.com.
  * 
- * Copyright (C) 2016, All Rights Reserved, PokitDok, Inc.
+ * Copyright (C) 2017, All Rights Reserved, PokitDok, Inc.
  * https://platform.pokitdok.com
  *
  * Please see the License.txt file for more information.
@@ -24,8 +24,8 @@
 global with sharing class Eligibility {    
  
     // These are your credentials
-    static final String CLIENT_ID = 'ClientID';
-    static final String CLIENT_SECRET = 'ClientSecret';
+    static final String CLIENT_ID = 'bbVYgUxvBfN7vro7viOT';
+    static final String CLIENT_SECRET = 'lSVEDN1y9nonyGepW13PnbCBcOReiS5fTEVXMN4g';
     
     // Example activity status
     static final String COMPLETED = 'Completed';
@@ -92,7 +92,8 @@ global with sharing class Eligibility {
      * 
      * @return the serialized JSON to send to the eligibility endpoint
      */
-    private static String buildEligibilityRequest(String patientID) {        
+    private static String buildEligibilityRequest(String patientID) {
+        // Find the patient in question using the passed in Patient ID
         Patient__c patient = [select Id, Name, Birth_Date__c, First_Name__c, Last_Name__c,
                               Member_ID__c, Payer__c 
                               from Patient__c 
@@ -119,6 +120,7 @@ global with sharing class Eligibility {
         member.put('id', patient.Member_ID__c);
         eligibilityRequest.put('member',member);
         
+        // Just fake this out
         Map<String,String> provider = new Map<String,String>();
         provider.put('first_name', 'Jane');
         provider.put('last_name', 'Doe');
@@ -170,7 +172,7 @@ global with sharing class Eligibility {
             }
         }
         
-        // Update the sObject
+        // Update the custom object
         update patient;
         
         // Asssemble the message

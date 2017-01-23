@@ -101,7 +101,7 @@ The repository also contains an example reference implementation that will use t
 License
 -------
 
-Copyright (c) 2016 PokitDok, Inc.  See LICENSE_ for details.
+Copyright (c) 2017 PokitDok, Inc.  See LICENSE_ for details.
 
 .. _documentation: https://platform.pokitdok.com/documentation/v4/?apex#
 .. _issues: https://github.com/pokitdok/pokitdok-apex/issues

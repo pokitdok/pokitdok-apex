@@ -13,8 +13,8 @@
 @isTest
 public class PokitDokAPIClientTest {
    
-    public final static String TEST_CLIENT_ID = 'ClientID';
-    public final static String TEST_CLIENT_SECRET = 'ClientSecret';
+    public final static String TEST_CLIENT_ID = '<YOUR_CLIENT_ID>';
+    public final static String TEST_CLIENT_SECRET = <YOUR_CLIENT_SECRET>';
     
     /**
      * The testAutoRenewalSetting method tests how the autoRenewSession flag is set in
