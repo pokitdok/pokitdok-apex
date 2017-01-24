@@ -63,7 +63,7 @@ public class PokitDokAPIClient {
     public static final String USER_AGENT_POKITDOK_CLIENT_NAME = 'pokitdok-apex';
     public static final String USER_AGENT_POKITDOK_CLIENT_API_VERSION = '4';
     public static final String USER_AGENT_SALESFORCE_OS_VERSION = 'Spring17';
-    public static final String USER_AGENT_SALESFORCE_API_VERSION = '38';
+    public static final String USER_AGENT_SALESFORCE_API_VERSION = '39';
     
     // Session management
     private String clientID;
@@ -105,23 +105,7 @@ public class PokitDokAPIClient {
                 this.autoRenewSession = false;
             }
         }
-    }
-    
-    /**
-     * The getAPIURL method returns the fully constructed URL to reach the given PokitDok
-     * API endpoint.  The endpoint might have parameters and arguments.
-     * 
-     * @param the endpoint is API endpoint in question
-     * @return the destination URL
-     */
-    public String getAPIURL(String endpoint) {
-        if (endpoint == AUTHENTICATION_ENDPOINT) {
-            return POKITDOK_BASE_URL + AUTHENTICATION_ENDPOINT;
-        } else {
-            return POKITDOK_BASE_URL + POKITDOK_API_VERSION + endpoint;
-        }
-    }
-    
+    }   
     
     /**
      * The request method implements an HTTPS request back to the PokitDok API servers.
@@ -144,10 +128,7 @@ public class PokitDokAPIClient {
             request.setMethod(method);
             request.setHeader('Authorization', 'Bearer ' + accessToken);
             request.setHeader('Content-Type', 'application/json');            
-            request.setHeader('User-Agent', USER_AGENT_POKITDOK_CLIENT_NAME + '#' +
-                                            USER_AGENT_POKITDOK_CLIENT_API_VERSION  + '#' +
-                                            USER_AGENT_SALESFORCE_OS_VERSION + '#' +
-                                            USER_AGENT_SALESFORCE_API_VERSION);
+            request.setHeader('User-Agent', getUserAgentData());
             
             // GET requests will default to POST, even if the body is set to '', resulting
             // in a 405 response
@@ -211,6 +192,34 @@ public class PokitDokAPIClient {
     }
     
     /**
+     * The getAPIURL method returns the fully constructed URL to reach the given PokitDok
+     * API endpoint.  The endpoint might have parameters and arguments.
+     * 
+     * @param the endpoint is API endpoint in question
+     * @return the destination URL
+     */
+    public String getAPIURL(String endpoint) {
+        if (endpoint == AUTHENTICATION_ENDPOINT) {
+            return POKITDOK_BASE_URL + AUTHENTICATION_ENDPOINT;
+        } else {
+            return POKITDOK_BASE_URL + POKITDOK_API_VERSION + endpoint;
+        }
+    }
+
+    /**
+     * The getUserAgentData method returns the fully User Agent string ready for insertion
+     * into the header data.
+     * 
+     * @return the User Agent data
+     */
+    private String getUserAgentData() {
+        return USER_AGENT_POKITDOK_CLIENT_NAME + '#' + 
+               USER_AGENT_POKITDOK_CLIENT_API_VERSION + '#' +
+               USER_AGENT_SALESFORCE_OS_VERSION + '#' +
+               USER_AGENT_SALESFORCE_API_VERSION;
+    } 
+    
+    /**
      * The fetchAccessToken method encapsulates OAuth requests and returns the session
      * access token to be used by subsequent API calls.
      * 
@@ -246,6 +255,7 @@ public class PokitDokAPIClient {
         String authorizationHeader = 'Basic ' + encodedclientCredentials;
         request.setHeader('Authorization', authorizationHeader);        
         request.setHeader('Content-Type', 'application/x-www-form-urlencoded');
+        request.setHeader('User-Agent', getUserAgentData());
         
         String body = 'grant_type=client_credentials';		        
         request.setBody(body);

@@ -24,8 +24,8 @@
 global with sharing class Eligibility {    
  
     // These are your credentials
-    static final String CLIENT_ID = 'bbVYgUxvBfN7vro7viOT';
-    static final String CLIENT_SECRET = 'lSVEDN1y9nonyGepW13PnbCBcOReiS5fTEVXMN4g';
+    static final String CLIENT_ID = '<YOUR_CLIENT_ID>';
+    static final String CLIENT_SECRET = '<YOUR_CLIENT_SECRET>';
     
     // Example activity status
     static final String COMPLETED = 'Completed';

@@ -93,7 +93,7 @@ Testing
 
 There is unit test coverage for the core API Client code. The tests exercise authentication and each of the implemented API endpoints.  Because tests are not allowed to go across the wire, a Mock Response Generator is supplied that will return mocked responses for the endpoints for which they have registered.
 
-The tests has been verified to run successfully on Salesforce on Winter '17 and code coverage is over 93%.
+The tests has been verified to run successfully on Salesforce on Spring '17 / API Version 39 and code coverage is 94%.
 
 The repository also contains an example reference implementation that will use the API Client to make actual calls against the PokitDok Platform APIs.  You will need to sign up for free at http://platform.pokitdok.com for your own App credentials.  See the example_ page for more information on the configuration necessary to fully test out the actual API calls.
 
