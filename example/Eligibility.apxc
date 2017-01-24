@@ -40,7 +40,7 @@ global with sharing class Eligibility {
      * The second uses the more bare metal get() method which GETs data from the /activities 
      * endpoint.
      */
-    webservice static String runEligibilityCheck(String patientID) {        
+    webservice static String runEligibilityCheck(String patientID) {
         // Use the PokitDok API Client to make an eligibility request (POST) using the convenience
         // function.
         PokitDokAPIClient pokitdok = new PokitDokAPIClient(CLIENT_ID, CLIENT_SECRET, true);
@@ -53,7 +53,7 @@ global with sharing class Eligibility {
             String activityID = getActivityID(eligibilityResponse);
             
             // Use the PokitDok API Client to make an activites request (GET) using the raw
-            // request method.  For the example, look up status of the aforementioned eligibility 
+            // get method.  For the example, look up status of the aforementioned eligibility 
             // transaction.
             String activitiesRequestURL = PokitDokAPIClient.ACTIVITIES_ENDPOINT + activityID;
             String activitiesResponse = pokitdok.get(activitiesRequestURL);        
@@ -236,8 +236,8 @@ global with sharing class Eligibility {
     }
 
     /**
-     * The hasErrors() method opens up the API response and checks to see if there are error messages
-     * in the response
+     * The responseHasErrors() method opens up the API response and checks to see if there are 
+     * error messages in the response
      * 
      * @param response is the JSON response from the API request
      * @return True if there are errors
