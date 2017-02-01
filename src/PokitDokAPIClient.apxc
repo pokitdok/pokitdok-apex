@@ -15,7 +15,7 @@
  * For reference, see:
  * https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_callouts_remote_site_settings.htm
  * 
- * Copyright (C) 2016, All Rights Reserved, PokitDok, Inc.
+ * Copyright (C) 2017, All Rights Reserved, PokitDok, Inc.
  * https://platform.pokitdok.com
  *
  * Please see the License.txt file for more information.
@@ -24,12 +24,46 @@
 public class PokitDokAPIClient {
     
     // URL endpoints
-    public static final String POKITDOK_BASE_URL = 'https://platform.pokitdok.com';
-    public static final String AUTHENTICATION_ENDPOINT = '/oauth2/token';
-    public static final String ELIGIBILITY_ENDPOINT = '/api/v4/eligibility/';
+    public static final String POKITDOK_BASE_URL = 'https://platform.pokitdok.com/';
+    public static final String POKITDOK_API_VERSION = 'api/v4/';
     
+    public static final String AUTHENTICATION_ENDPOINT = 'oauth2/token';
+    public static final String ACTIVITIES_ENDPOINT = 'activities/';
+    public static final String AUTHORIZATIONS_ENDPOINT = 'authorizations/';
+    public static final String BENEFITS_ENROLLMENT_ENDPOINT = 'enrollment/';
+    public static final String CASH_PRICES_ENDPOINT = 'prices/cash/';
+    public static final String CLAIMS_ENDPOINT = 'claims/';
+    public static final String CLAIMS_CONVERT_ENDPOINT = 'claims/convert/';
+    public static final String CLAIMS_STATUS_ENDPOINT = 'claims/status/';
+    public static final String ELIGIBILITY_ENDPOINT = 'eligibility/';
+    public static final String ENROLLMENT_SNAPSHOT_ENDPOINT = 'enrollment/snapshot/';
+    public static final String ICD_CONVERT_ENDPOINT = 'icd/convert/';
+    public static final String IDENTITY_MANAGEMENT_ENDPOINT = 'identity/';    
+    public static final String IDENTITY_PROOF_ENDPOINT = 'identity/proof/';
+    public static final String IN_NETWORK_PHARMACIES_ENDPOINT = 'pharmacy/network/';
+    public static final String INSURANCE_PRICES_ENDPOINT = 'prices/insurance/';
+    public static final String MEDICAL_PROCEDURE_CODE_ENDPOINT = 'mpc/';
+    public static final String OUT_OF_POCKET_ESTIMATE_ENDPOINT = 'oop/insurance-estimate/';
+    public static final String OUT_OF_POCKET_LOAD_ENDPOINT = 'oop/insurance-load-price/';
+    public static final String PHARMACY_FORMULARY_ENDPOINT = 'pharmacy/formulary/';
+    public static final String PHARMACY_PLANS_ENDPOINT = 'pharmacy/plans/';
+    public static final String PLANS_ENDPOINT = 'plans/';
+    public static final String PROVIDERS_ENDPOINT = 'providers/';
+    public static final String REFERRALS_ENDPOINT = 'referrals/';
+    public static final String SCHEDULING_ENDPOINT = 'schedule/schedulers/';
+    public static final String TRADING_PARTNERS_ENDPOINT = 'tradingpartners/';
+    
+    public static final String GET_METHOD = 'GET';
+    public static final String POST_METHOD = 'POST';
+        
     public static final String CALLOUT_EXCEPTION_MESSAGE = 'Unable to process your ' +
         'request at this time. The original request has been logged';
+    
+    // User Agent data
+    public static final String USER_AGENT_POKITDOK_CLIENT_NAME = 'pokitdok-apex';
+    public static final String USER_AGENT_POKITDOK_CLIENT_API_VERSION = '4';
+    public static final String USER_AGENT_SALESFORCE_OS_VERSION = 'Spring17';
+    public static final String USER_AGENT_SALESFORCE_API_VERSION = '39';
     
     // Session management
     private String clientID;
@@ -71,11 +105,123 @@ public class PokitDokAPIClient {
                 this.autoRenewSession = false;
             }
         }
+    }   
+    
+    /**
+     * The request method implements an HTTPS request back to the PokitDok API servers.
+     * 
+     * @param the method is the HTTP method:  GET, POST, PUT, DELETE
+     * @param the APIEndpoint is the URL of the target API endpoint
+     * @param the requestPayload is the serialized JSON request
+     * @return the serialized JSON response
+     */
+    public String request(String method, String APIEndpoint, String requestPayload) {
+        Http http = new Http();
+        HttpRequest request = new HttpRequest();
+        HTTPResponse response = new HttpResponse();
+        
+        // Authenticate before making the API call
+        String accessToken = fetchAccessToken();        
+        if (accessToken != '') {
+            // Set up the request to the PokitDok Platform POST endpoint
+            request.setEndpoint(getAPIURL(APIEndpoint));
+            request.setMethod(method);
+            request.setHeader('Authorization', 'Bearer ' + accessToken);
+            request.setHeader('Content-Type', 'application/json');            
+            request.setHeader('User-Agent', getUserAgentData());
+            
+            // GET requests will default to POST, even if the body is set to '', resulting
+            // in a 405 response
+            if (request.getMethod() != GET_METHOD) {            	 
+                request.setBody(requestPayload);
+            }
+            
+            try {
+                response = http.send(request);
+            } catch(System.CalloutException e) {
+                return processCalloutException(e, request);
+            }
+            
+            // If the session has expired, flush the cache, renew the access token and
+            // replay the transaction
+            if (response.getStatusCode() == 401) {
+                if (sessionManager.removeToken()) {
+                    accessToken = fetchAccessToken();
+                    if (accessToken != '') {
+                        request.setHeader('Authorization', 'Bearer ' + accessToken);
+                        try {
+                            response = http.send(request);
+                        } catch(System.CalloutException e) {
+                            return processCalloutException(e, request);
+                        }
+                    }
+                }
+            }
+            
+            // Log bad responses            
+            if (response.getStatusCode() != 200) {
+                System.debug(Logginglevel.ERROR, 
+                             '[PokitDokAPIClient]  Request: ' + request.getBody());
+                System.debug(Logginglevel.ERROR, 
+                             '[PokitDokAPIClient]  Response: ' + response.getBody());
+            }
+        }
+        
+        return response.getBody();        
     }
     
     /**
-     * The authenticate method encapsulates OAuth requests and returns the session access
-     * token to be used by subsequent API calls.
+     * The get method implements the GET method.
+     * 
+     * @param the APIEndpoint is the URL of the target API endpoint
+     * @return the serialized JSON response
+     */
+    public String get(String APIEndpoint) {        
+        return request(GET_METHOD, APIEndpoint, null);
+    }
+    
+    /**
+     * The post method implements the POST method.
+     * 
+     * @param the APIEndpoint is the URL of the target API endpoint
+     * @param the requestPayload is the serialized JSON request
+     * @return the serialized JSON response
+     */
+    public String post(String APIEndpoint, String requestPayload) {
+        return request(POST_METHOD, APIEndpoint, requestPayload);
+    }
+    
+    /**
+     * The getAPIURL method returns the fully constructed URL to reach the given PokitDok
+     * API endpoint.  The endpoint might have parameters and arguments.
+     * 
+     * @param the endpoint is API endpoint in question
+     * @return the destination URL
+     */
+    public String getAPIURL(String endpoint) {
+        if (endpoint == AUTHENTICATION_ENDPOINT) {
+            return POKITDOK_BASE_URL + AUTHENTICATION_ENDPOINT;
+        } else {
+            return POKITDOK_BASE_URL + POKITDOK_API_VERSION + endpoint;
+        }
+    }
+
+    /**
+     * The getUserAgentData method returns the fully User Agent string ready for insertion
+     * into the header data.
+     * 
+     * @return the User Agent data
+     */
+    private String getUserAgentData() {
+        return USER_AGENT_POKITDOK_CLIENT_NAME + '#' + 
+               USER_AGENT_POKITDOK_CLIENT_API_VERSION + '#' +
+               USER_AGENT_SALESFORCE_OS_VERSION + '#' +
+               USER_AGENT_SALESFORCE_API_VERSION;
+    } 
+    
+    /**
+     * The fetchAccessToken method encapsulates OAuth requests and returns the session
+     * access token to be used by subsequent API calls.
      * 
      * Authentication works one of two ways.  You can exercise the option to utilize the
      * Salesforce Platform Cache to store the session access token for future requests,
@@ -83,7 +229,7 @@ public class PokitDokAPIClient {
      * 
      * @return the session access token if authenticated; an empty String otherwise
      */
-    public String authenticate() {
+    public String fetchAccessToken() {
         String accessToken = '';
         
         // Check the cache for the access token
@@ -100,7 +246,7 @@ public class PokitDokAPIClient {
         HTTPResponse response = new HttpResponse();
         
         // Set up the request to the PokitDok Platform OAuth endpoint
-        request.setEndpoint(POKITDOK_BASE_URL + AUTHENTICATION_ENDPOINT);
+        request.setEndpoint(getAPIURL(AUTHENTICATION_ENDPOINT));
         request.setMethod('POST');        
         
         // Encode the Client ID / Client Secret combination and dump it in the header       
@@ -109,6 +255,7 @@ public class PokitDokAPIClient {
         String authorizationHeader = 'Basic ' + encodedclientCredentials;
         request.setHeader('Authorization', authorizationHeader);        
         request.setHeader('Content-Type', 'application/x-www-form-urlencoded');
+        request.setHeader('User-Agent', getUserAgentData());
         
         String body = 'grant_type=client_credentials';		        
         request.setBody(body);
@@ -142,72 +289,15 @@ public class PokitDokAPIClient {
     }
     
     /**
-     * The post method implements the POST method.
-     * 
-     * @param the APIEndpoint is the URL of the target API endpoint
-     * @param the requestPayload is the serialized JSON request
-     * @return the serialized JSON response
-     */
-    public String post(String APIEndpoint, String requestPayload) {
-        Http http = new Http();
-        HttpRequest request = new HttpRequest();
-        HTTPResponse response = new HttpResponse();
-        
-        // Authenticate before making the API call
-        String accessToken = authenticate();        
-        if (accessToken != '') {
-            // Set up the request to the PokitDok Platform POST endpoint
-            request.setEndpoint(APIEndpoint);
-            request.setMethod('POST');
-            request.setHeader('Authorization', 'Bearer ' + accessToken);
-            request.setHeader('Content-Type', 'application/json');
-            request.setBody(requestPayload);
-            
-            try {
-                response = http.send(request);
-            } catch(System.CalloutException e) {
-                return processCalloutException(e, request);
-            }
-            
-            // If the session has expired, flush the cache, renew the access token and
-            // replay the transaction
-            if (response.getStatusCode() == 401) {
-                if (sessionManager.removeToken()) {
-                    accessToken = authenticate();
-                    if (accessToken != '') {
-                        request.setHeader('Authorization', 'Bearer ' + accessToken);
-                        try {
-                            response = http.send(request);
-                        } catch(System.CalloutException e) {
-                            return processCalloutException(e, request);
-                        }
-                    }
-                }
-            }
-            
-            // Log bad responses            
-            if (response.getStatusCode() != 200) {
-                System.debug(Logginglevel.ERROR, 
-                             '[PokitDokAPIClient]  POST Request: ' + request.getBody());
-                System.debug(Logginglevel.ERROR, 
-                             '[PokitDokAPIClient]  POST Response: ' + response.getBody());
-            }
-        }
-        
-        return response.getBody();        
-    }
-    
-    /**
-     * The eligibility method performs an eligibility check given a patient's PHI, a
-     * provider's information and the ID of the insurer.
+     * The eligibility method is a convenience function that performs an eligibility
+     * check given a patient's PHI, a provider's information and the ID of the insurer.
      * 
      * @param the serializedJSON is request payload
      * @return the serialized JSON response
      */
     public String eligibility(String serializedJSON){        
         // Set up the request to the PokitDok Platform Eligibility endpoint        
-        String endpoint = POKITDOK_BASE_URL + ELIGIBILITY_ENDPOINT;
-        return post(endpoint, serializedJSON);
+        return post(ELIGIBILITY_ENDPOINT, serializedJSON);
     }
     
     /**
@@ -227,4 +317,3 @@ public class PokitDokAPIClient {
         return '{ "error": ' + CALLOUT_EXCEPTION_MESSAGE + ' }';        
     }
 }
-
