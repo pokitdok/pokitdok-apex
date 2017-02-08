@@ -92,8 +92,8 @@ Navigate: ``Patients`` > ``New``
 :Member ID: 0987654321
 
 
-Make An Eligibility Request
----------------------------
+Make An Eligibility Request And Verify The Transaction
+------------------------------------------------------
 
 After creating the patient, click the ``Run Eligibility Request`` button.  If successful, you will see a message stating something akin to:
 
@@ -101,11 +101,14 @@ After creating the patient, click the ``Run Eligibility Request`` button.  If su
 
 You should also see the ``Active Coverage`` and ``Plan Begin Date`` fields update.
 
+This example reference implementation demonstrates two API transactions:  Eligibility (POST) and Activities (GET), using a convenience method
+and the more bare metal requests approach.
+
 
 License
 -------
 
-Copyright (c) 2016 PokitDok, Inc.  See LICENSE_ for details.
+Copyright (c) 2017 PokitDok, Inc.  See LICENSE_ for details.
 
 .. _documentation: https://platform.pokitdok.com/documentation/v4/?apex#
 .. _issues: https://github.com/pokitdok/pokitdok-apex/issues

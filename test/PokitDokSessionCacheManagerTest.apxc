@@ -2,7 +2,7 @@
  * The PokitDokSessionCacheManagerTest class tests out the functionality of managing
  * the OAuth access token for session management with the PokitDok Platform.
  * 
- * Copyright (C) 2016, All Rights Reserved, PokitDok, Inc.
+ * Copyright (C) 2017, All Rights Reserved, PokitDok, Inc.
  * https://platform.pokitdok.com
  *
  * Please see the License.txt file for more information.
@@ -80,4 +80,3 @@ public class PokitDokSessionCacheManagerTest {
         System.assertEquals(false, removedToken);
     }
 }
-
