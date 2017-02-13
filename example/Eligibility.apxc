@@ -15,7 +15,7 @@
  * The Client ID and Client Secret credentials passed into the API Client constructor are
  * obtained by signing up for free at https://platform.pokitdok.com.
  * 
- * Copyright (C) 2016, All Rights Reserved, PokitDok, Inc.
+ * Copyright (C) 2017, All Rights Reserved, PokitDok, Inc.
  * https://platform.pokitdok.com
  *
  * Please see the License.txt file for more information.
@@ -27,38 +27,53 @@ global with sharing class Eligibility {
     static final String CLIENT_ID = '<YOUR_CLIENT_ID>';
     static final String CLIENT_SECRET = '<YOUR_CLIENT_SECRET>';
     
+    // Example activity status
+    static final String COMPLETED = 'Completed';
+    
     /**
-     * The runEligibilityCheck() method instantiates the API Client, manufactures a JSON
-     * payload with the patient's PHI, executes the eligibility method and does something 
-     * meaningful with the JSON response.
+     * The runEligibilityCheck() method instantiates the API Client, manufactures a JSON 
+     * payload with the patient's PHI, executes the eligibility method and does something
+     * meaningful with the JSON response.  
+     * 
+     * Two different approaches of using the APIs are demonstrated:  The first uses a 
+     * convenience method (the eligibility() method) which POSTs to the /eligibility endpoint.
+     * The second uses the more bare metal get() method which GETs data from the /activities 
+     * endpoint.
      */
     webservice static String runEligibilityCheck(String patientID) {
-        
-        // Use the PokitDok API Client to make an eligibility request
+        // Use the PokitDok API Client to make an eligibility request (POST) using the convenience
+        // function.
         PokitDokAPIClient pokitdok = new PokitDokAPIClient(CLIENT_ID, CLIENT_SECRET, true);
         String eligibilityRequest = buildEligibilityRequest(patientID);
         String eligibilityResponse = pokitdok.eligibility(eligibilityRequest);
         
-        // Check for errors
-        String errorMessage = null;
-        JSONParser parser = JSON.createParser(eligibilityResponse);
-        while (parser.nextToken() != null) {
-            if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
-                (parser.getText() == 'error') || (parser.getText() == 'errors')) {
-                    return 'Unable to process your eligibility request at this time.  The ' +
-                        'original request has been logged.';
+        // If everything looks good, move along
+        if (!responseHasErrors(eligibilityResponse)) {       
+            // Get the activity ID of the eligibility transaction and look up its status
+            String activityID = getActivityID(eligibilityResponse);
+            
+            // Use the PokitDok API Client to make an activites request (GET) using the raw
+            // get method.  For the example, look up status of the aforementioned eligibility 
+            // transaction.
+            String activitiesRequestURL = PokitDokAPIClient.ACTIVITIES_ENDPOINT + activityID;
+            String activitiesResponse = pokitdok.get(activitiesRequestURL);        
+            
+            if (!responseHasErrors(activitiesResponse) && 
+                getActivityStatus(activitiesResponse) == COMPLETED) {
+                // Do something meaningful with the response
+                return getCoverageInformation(eligibilityResponse, patientID);
             }
         }
         
-        // Otherwise, do something meaningful with the response
-        return parseEligibilityResponse(eligibilityResponse, patientID);
+        return 'Unable to process your eligibility request at this time.  The ' +
+               'original request has been logged.';
     }
     
     /**
      * The buildEligibilityRequest() method abstracts the extraction of the data necessary
-     * data to build the payload for the eligibility request.  The PHI may exist in one or
-     * many custom Salesforce objects.  For the purposes of this example, the data is simply
-     * hardcoded and produces a JSON payload that looks like this:
+     * data to build the JSON payload for the eligibility request, a POST request.  The PHI
+     * may exist in one or many custom Salesforce objects.  For the purposes of this example,
+     * the data is simply hardcoded and produces a JSON payload that looks like this:
      *
      * {
      *     "member": {
@@ -78,7 +93,7 @@ global with sharing class Eligibility {
      * @return the serialized JSON to send to the eligibility endpoint
      */
     private static String buildEligibilityRequest(String patientID) {
-        
+        // Find the patient in question using the passed in Patient ID
         Patient__c patient = [select Id, Name, Birth_Date__c, First_Name__c, Last_Name__c,
                               Member_ID__c, Payer__c 
                               from Patient__c 
@@ -105,6 +120,7 @@ global with sharing class Eligibility {
         member.put('id', patient.Member_ID__c);
         eligibilityRequest.put('member',member);
         
+        // Just fake this out
         Map<String,String> provider = new Map<String,String>();
         provider.put('first_name', 'Jane');
         provider.put('last_name', 'Doe');
@@ -118,17 +134,17 @@ global with sharing class Eligibility {
     }
     
     /**
-     * The parseEligibilityResponse parses the JSON response from the eligibility API
+     * The getCoverageInformation parses the JSON response from the eligibility API
      * call and produces a meaningful message for the user.  It demonstrates how to pull
      * out a few fields in the JSON to construct a message.  In this case, the message
      * conveys to the user that the patient's insurance coverage is currently active, as
      * well as when coverage began under the plan.
      * 
-     * @param response is the JOSN response from the eligibilty request
+     * @param response is the JSON response from the eligibilty request
      * @return some meaningful text to send back to the end user
      */
-    private static String parseEligibilityResponse(String response, String patientID) {
-        
+    private static String getCoverageInformation(String response, String patientID) {        
+        // Find the patient record
         Patient__c patient = [select Id, Name, Birth_Date__c, First_Name__c, Last_Name__c,
                               Member_ID__c, Payer__c 
                               from Patient__c 
@@ -144,30 +160,97 @@ global with sharing class Eligibility {
         while (parser.nextToken() != null) {
             if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
                 (parser.getText() == 'active')) {
-                    parser.nextToken();
-                    isActive = parser.getBooleanValue();
-                    patient.Active_Coverage__c = isActive;
+                parser.nextToken();
+                isActive = parser.getBooleanValue();
+                patient.Active_Coverage__c = isActive;
             }
             if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
                 (parser.getText() == 'plan_begin_date')) {
-                    parser.nextToken();
-                    planBeginDate = parser.getDateValue();
-                    patient.Plan_Begin_Date__c = planBeginDate;
+                parser.nextToken();
+                planBeginDate = parser.getDateValue();
+                patient.Plan_Begin_Date__c = planBeginDate;
             }
         }
         
+        // Update the custom object
         update patient;
         
         // Asssemble the message
         if (isActive) {
             meaningfulResponse = 'The patient\'s coverage is active and began on ' + 
-                planBeginDate.format();
-        }
-        else {
+                                 planBeginDate.format();
+        } else {
             meaningfulResponse = 'The patient\'s coverage has lapsed and is not active';
         }
         
         return meaningfulResponse;
-    }  
-}
+    }
+    
+    /**
+     * The getActivityID() method opens up the eligibility response and extracts the
+     * actvity ID of the actual API transaction
+     * 
+     * @param eligibilityResponse is the JSON response from the eligibilty request
+     * @return the activity ID
+     */
+    private static String getActivityID(String eligibilityResponse) {        
+        String activityID = '';
+        
+        // Parse the eligibility response and extract the activity ID of the transaction
+        JSONParser parser = JSON.createParser(eligibilityResponse);
+        while (parser.nextToken() != null) {
+            if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
+                (parser.getText() == 'activity_id')) {
+                parser.nextToken();
+                activityID = parser.getText();
+            }
+        }
+        
+        return activityID;
+    }
+    
+    /**
+     * The getActivityStatus() method opens up the activities response and extracts the
+     * activity status of the transaction in question.  The JSON fields in question aren't
+     * unique, so the deserializeUntyped method is used for better precision.
+     * 
+     * @param activityResponse is the JSON response from the activity request
+     * @return the activity status
+     */
+    private static String getActivityStatus(String activityResponse) {        
+        String activityStatus = '';
+        
+        // Parse the activities response and extract the activity status
+        Map <String, Object> root = (Map <String, Object>) JSON.deserializeUntyped(activityResponse);
+        if (!root.isEmpty() && root.containsKey('data')) {
+            Map <String, Object> data = (Map <String, Object>) root.get('data');
+            if (!data.isEmpty() && data.containsKey('state')) {
+            	Map <String, Object> state = (Map <String, Object>) data.get('state');
+                if (!state.isEmpty() && state.containsKey('title')) {
+                    activityStatus = (String) state.get('title');
+                }
+            }
+    	}
+        
+        return activityStatus;
+    }
 
+    /**
+     * The responseHasErrors() method opens up the API response and checks to see if there are 
+     * error messages in the response
+     * 
+     * @param response is the JSON response from the API request
+     * @return True if there are errors
+     */    
+    private static Boolean responseHasErrors(String response) {        
+        JSONParser parser = JSON.createParser(response);
+        while (parser.nextToken() != null) {
+            if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && 
+                (parser.getText() == 'error') || (parser.getText() == 'errors')) {
+                return True;
+            }
+        }
+        
+        return False;
+    }    
+}
